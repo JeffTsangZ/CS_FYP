@@ -1,4 +1,4 @@
-import pygame, random, os
+import pygame, random, os, math
 
 # draw text on screen
 def text(screen, text, color, size, pos, align="left"):
@@ -585,6 +585,8 @@ def main():
     score = 0
     prevScore = 0
     time = 0
+    menu_effect_timer = 0
+    win_lose_effect_timer = 0
     images = [
         pygame.transform.scale(pygame.image.load("media/dungeon_crystal_1.png"), [WIDTH, HEIGHT]),  # 0
         pygame.transform.scale(pygame.image.load("media/title_text.png"), [816, 144]),              # 1
@@ -620,7 +622,7 @@ def main():
             (2, "莉子：\n言靈魔法需要東瀛語來發動，最初階的言靈魔法是\n「五十音」。"),
             (3, "*作者：本作中的東瀛語=日語"),
             (2, "莉子：\n雖然比較難理解，但是「五十音」不只有50個音喔！"),
-            (2, "莉子：\n不管了，讓我先開始教你吧！"),
+            (2, "莉子：\n不管了，讓我先開始教你吧！\n施法時要全力大聲地喊出來。"),
             (2, "莉子：\n先記下這5個音。\n「あ」a、「い」i、「う」u、「え」e、「お」o"),
             (1, "赤真：\n「あ」a、「い」i、「う」u、「え」e、「お」o\n。。。"),
             (1, "赤真：\n這五個音有什麼意思嗎？"),
@@ -634,6 +636,33 @@ def main():
             (2, "莉子：\n準備好了嗎？"),
             (1, "赤真：\n準備好了！來吧！")
         ],
+        [
+            (2, '莉子：\n不錯不錯！你成為一個合格的冒險者了！'),
+            (1, '赤真：\n呼～（好險'),
+            (2, '莉子：\n既然你學會了首5個音，我就開始教你更多吧！'),
+            (2, '莉子：\n聽好了，這個是か行。\n 「か」ka、「き」ki、「く」ku、「け」ke、「こ」ko'),
+            (2, '莉子：\n這些跟上次的5個音一樣，都是屬於清音。其他種類\n還有濁音、半濁音、拗音。'),
+            (1, '赤真：\n清音？濁音？'),
+            (2, '莉子：\n正好か行有濁音，順便也教你吧！'),
+            (2, '莉子：\n「が」ga、「ぎ」gi、「ぐ」gu、「げ」ge、「ご」go'),
+            (1, '赤真：\n看不出有什麼分別...'),
+            (2, '莉子：\n你再看仔細點！右上角多了2點，讀音也會有所不同喔！\n「か」ka、「が」ga'),
+            (1, '赤真：\n看到了。'),
+            (2, '莉子：\n另外，東瀛語的書寫方法亦有兩種，分別是平假名和\n片假名。我們正在學的全都是平假名喔！'),
+            (1, '赤真：\n(好複雜...'),
+            (2, '莉子：\n不過也不用一次過全部記得，我們慢慢來吧！'),
+            (1, '赤真：\n謝謝你，莉子小姐。'),
+            (2, '莉子：\n嘿嘿～呀！差點忘了！'),
+            (1, '赤真：\n怎麼了？'),
+            (2, '莉子：\n差點忘記教你言靈魔法的回復術。'),
+            (2, '莉子：\n我先示範一次，之後你應該就能學會了。何況本小姐\n教得這麼好，對吧？'),
+            (1, '赤真：\n點頭(滴汗...'),
+            (2.1, '莉子：\n<か>！'),
+            (1, '赤真：\n身上的疼痛疲勞都消失了！')
+            (2, '莉子：\n正好，前面有另一隻史萊姆，試試吧！'),
+            (1, '赤真：\n好，來吧！')
+        ]
+
     ]
     # 0: both gray; 1: left talking; 2: right talking; 3: both talking
     story_num = 0
@@ -681,7 +710,11 @@ def main():
             screen.blit(images[1], r)
 
             # play button
+            images[2].set_alpha(int(205+math.sin(menu_effect_timer)*50))
             screen.blit(images[2], (586, 787))
+            menu_effect_timer += 0.1
+            if menu_effect_timer > 100000:
+                menu_effect_timer = 0
             
             if(time != 0):
                 time += 1
@@ -699,14 +732,15 @@ def main():
                         if (time == 0):
                             time += 1
 
+            # enter story
             if(time > fps*2):
                 game_state = "story"
                 story_num = 0
                 dialog_num = 0
                 time = 0
-                
-            
+                       
         if game_state == "story":
+            # end story
             if dialog_num == len(dialog[story_num]):
                 time = 0
 
@@ -722,6 +756,7 @@ def main():
                 player_hp = 100
                 enemy_hp = 100
                 battle_detail[stage]["order"] = []
+                stage = story_num
                 for _ in range(battle_detail[stage]["num_of_qs"]):
                     temp = random.randint(0, len(battle_detail[stage]["question"])-1)
                     if len(battle_detail[stage]["order"]) == 0:
@@ -730,9 +765,11 @@ def main():
                         while battle_detail[stage]["order"][-1] == temp:
                             temp = random.randint(0, len(battle_detail[stage]["question"])-1)
                         battle_detail[stage]["order"].append(temp)
-                action = "attack"
+                if stage == 0:
+                    action = "attack"
+                else:
+                    None
                 question_num = 0
-                stage = 0
                 correct = None
                 random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
             else:
@@ -759,11 +796,17 @@ def main():
                 pygame.draw.rect(screen, pygame.Color("#e8e8e8"), [123, 766, 1193, 184], border_radius=5)
                 text(screen, dialog[story_num][dialog_num][1], (0, 0, 0), 48, [153, 776])
 
-                # effect
+                # effect effect
                 if (dialog[story_num][dialog_num][0] == 1.1):
                     if(time > 0 and time < fps*2):
                         time += 1
                         text_sp(screen, "あ", (120, 0, 0), 200, [WIDTH/2, HEIGHT/2], int((fps*2-time)/(fps*2)*255), "center")
+                    elif(time >= fps*2):
+                        time = 0
+                if (dialog[story_num][dialog_num][0] == 2.1):
+                    if(time > 0 and time < fps*2):
+                        time += 1
+                        text_sp(screen, "か", (120, 255, 120), 200, [220, 520], int((fps*2-time)/(fps*2)*255), "center")
                     elif(time >= fps*2):
                         time = 0
                     
@@ -779,7 +822,8 @@ def main():
                             else:
                                 dialog_num += 1
                                 if dialog_num != len(dialog[story_num]):
-                                    if dialog[story_num][dialog_num][0] == 1.1:
+                                    # effect list
+                                    if dialog[story_num][dialog_num][0] == 1.1 or dialog[story_num][dialog_num][0] == 2.1:
                                         time = 1
 
         if game_state == "playing":
@@ -887,7 +931,7 @@ def main():
                             question_num += 1
                             if question_num >= battle_detail[stage]["num_of_qs"] or enemy_hp <= 0:
                                 time = 0
-                                game_state = "menu"
+                                game_state = "win"
                             else:
                                 random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
                     elif action == "recover":
@@ -910,7 +954,7 @@ def main():
                             question_num += 1
                             if question_num >= battle_detail[stage]["num_of_qs"] or player_hp <= 0:
                                 time = 0
-                                game_state = "menu"
+                                game_state = "lose"
                             else:
                                 random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
                     elif action == "recover":
@@ -1666,45 +1710,40 @@ def main():
 
 
         # this is game state of winning the game
-        if game_state == "showScore":
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    pos = pygame.mouse.get_pos()
-                    if click_check(pos, [WIDTH/2-128/2, HEIGHT/2-60/2+128, 128, 60]):
-                        game_state = "menu"
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:
-                        game_state = "menu"
+        if game_state == "win" or game_state == "lose":
+            # BG image
+            screen.blit(images[3], (0, 0))
 
-            screen.fill((135, 206, 235))
-            text(screen, "最終スコア: " + str(score) + "/" + str(no_of_qs), (0, 0, 0), 24, (WIDTH/2, HEIGHT/2 - 64), "center")
+            # right character
+            screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), (959, 263))
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), [1130, 0, 310, 80])
+            text(screen, "HP", (0, 0, 0), 24, [1158, 22])
+            pygame.draw.rect(screen, (0, 0, 0), [1209, 34, 204, 13])
+            pygame.draw.rect(screen, (255, 0, 0), [1209, 34, player_hp/100*204, 13])
+            
 
-            text_input_box = pygame.draw.rect(screen, (20, 20, 20), [WIDTH/2-128/2, HEIGHT/2-60/2+128, 128, 60])
-            text_input_box = pygame.draw.rect(screen, (140, 235, 52), [WIDTH/2-128/2+2, HEIGHT/2-60/2+2+128, 128-4, 60-4])
-            text(screen, "戻る", (0, 0, 0), 24, (WIDTH/2, HEIGHT/2+128), "center")
+            # left enemy
+            screen.blit(battle_detail[stage]["enemy_surf"], (-51, 100))
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), [0, 0, 310, 80])
+            text(screen, "HP", (0, 0, 0), 24, [28, 22])
+            pygame.draw.rect(screen, (0, 0, 0), [79, 34, 204, 13])
+            pygame.draw.rect(screen, (255, 0, 0), [79, 34, enemy_hp/100*204, 13])
 
-        # this is game state for losing the game
-        if game_state == "lost":
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    pos = pygame.mouse.get_pos()
-                    if click_check(pos, [WIDTH/2-128/2, HEIGHT/2-60/2+128, 128, 60]):
-                        game_state = "menu"
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:
-                        game_state = "menu"
-                        
+            s.set_alpha(125)
+            screen.blit(s, (0,0))
 
-            screen.fill((135, 206, 235))
-            text(screen, "残念でした。次回も頑張ってください‼", (0, 0, 0), 24, (WIDTH/2, HEIGHT/2 - 64), "center")
+            if game_state == "win":
+                text_sp(screen, "靈\n殺", (200, 200, 200), 200, [WIDTH/2, HEIGHT/2], 255, "center")
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+            elif game_state == "lose":
+                text_sp(screen, "死", (150, 0, 0), 200, [WIDTH/2, HEIGHT/2], 255, "center")
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
 
-            text_input_box = pygame.draw.rect(screen, (20, 20, 20), [WIDTH/2-128/2, HEIGHT/2-60/2+128, 128, 60])
-            text_input_box = pygame.draw.rect(screen, (140, 235, 52), [WIDTH/2-128/2+2, HEIGHT/2-60/2+2+128, 128-4, 60-4])
-            text(screen, "戻る", (0, 0, 0), 24, (WIDTH/2, HEIGHT/2+128), "center")
+            
 
         clock.tick(fps)
         pygame.display.update()

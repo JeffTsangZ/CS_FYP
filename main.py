@@ -10,32 +10,56 @@ HEIGHT = int(WIDTH/1440*960)
 def transform_scale(arr):
     return [int(n*WIDTH/1440) for n in arr]
 # draw text on screen
-def text(screen, text, color, size, pos, align="left"):
-    text = text.encode("utf-8").decode("utf-8")
+# draw text on screen
+def text(screen, text_string, color, size, pos, align="left"):
     try:
         my_font = pygame.font.Font('media/LXGWMarkerGothic-Regular.ttf', transform_scale([size])[0])
     except Exception:
         my_font = pygame.font.Font(pygame.font.get_default_font(), transform_scale([size])[0])
-    text_surface = my_font.render(text, True, color)
-    if align == "left":
-        screen.blit(text_surface, pos)
-    elif align == "center" or align == "centre":
-        text_rect = text_surface.get_rect(center=pos)
-        screen.blit(text_surface, text_rect)
 
-def text_sp(screen, text, color, size, pos, alpla, align="left"):
-    text = text.encode("utf-8").decode("utf-8")
+    lines = text_string.split('\n')
+    x, y = pos
+    line_height = my_font.get_linesize()
+
+    # Adjust starting y for centered text block
+    if align == "center" or align == "centre":
+        total_height = line_height * len(lines)
+        y -= total_height / 2
+
+    for line in lines:
+        text_surface = my_font.render(line, True, color)
+        if align == "left":
+            screen.blit(text_surface, (x, y))
+        elif align == "center" or align == "centre":
+            # For centering, we use the original x from pos, but adjust y for each line
+            text_rect = text_surface.get_rect(center=(pos[0], y + text_surface.get_height() / 2))
+            screen.blit(text_surface, text_rect)
+        y += line_height # Move y down for the next line
+
+def text_sp(screen, text_string, color, size, pos, alpha, align="left"):
     try:
         my_font = pygame.font.Font('media/YujiSyuku-Regular.ttf', transform_scale([size])[0])
     except Exception:
         my_font = pygame.font.Font(pygame.font.get_default_font(), transform_scale([size])[0])
-    text_surface = my_font.render(text, True, color)
-    text_surface.set_alpha(alpla)
-    if align == "left":
-        screen.blit(text_surface, pos)
-    elif align == "center" or align == "centre":
-        text_rect = text_surface.get_rect(center=pos)
-        screen.blit(text_surface, text_rect)
+
+    lines = text_string.split('\n')
+    x, y = pos
+    line_height = my_font.get_linesize()
+
+    # Adjust starting y for centered text block
+    if align == "center" or align == "centre":
+        total_height = line_height * len(lines)
+        y = pos[1] - total_height / 2
+
+    for line in lines:
+        text_surface = my_font.render(line, True, color)
+        text_surface.set_alpha(alpha)
+        if align == "left":
+            screen.blit(text_surface, (x, y))
+        elif align == "center" or align == "centre":
+            text_rect = text_surface.get_rect(center=(pos[0], y + text_surface.get_height() / 2))
+            screen.blit(text_surface, text_rect)
+        y += line_height
 
 # convert romaji to katagana
 def textinput(inp):

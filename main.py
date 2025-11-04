@@ -514,7 +514,8 @@ def main():
     #basic set up for pygame
     pygame.init()
     pygame.font.init()
-    WIDTH, HEIGHT = 1440, 960
+    WIDTH  = int(pygame.display.Info().current_w * 0.65)
+    HEIGHT = int(WIDTH/1440*960)
     
     os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % ((pygame.display.get_desktop_sizes()[0][0]-WIDTH)/2, 20)
     
@@ -658,7 +659,7 @@ def main():
             (2, '莉子：\n我先示範一次，之後你應該就能學會了。何況本小姐\n教得這麼好，對吧？'),
             (1, '赤真：\n點頭(滴汗...'),
             (2.1, '莉子：\n<か>！'),
-            (1, '赤真：\n身上的疼痛疲勞都消失了！')
+            (1, '赤真：\n身上的疼痛疲勞都消失了！'),
             (2, '莉子：\n正好，前面有另一隻史萊姆，試試吧！'),
             (1, '赤真：\n好，來吧！')
         ]
@@ -735,7 +736,7 @@ def main():
             # enter story
             if(time > fps*2):
                 game_state = "story"
-                story_num = 0
+                story_num = 0     # will change after adding save load function
                 dialog_num = 0
                 time = 0
                        

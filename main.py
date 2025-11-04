@@ -1,12 +1,21 @@
 import pygame, random, os, math
 
+#basic set up for pygame
+pygame.init()
+pygame.font.init()
+
+WIDTH  = int(pygame.display.Info().current_w * 0.65)
+HEIGHT = int(WIDTH/1440*960)
+
+def transform_scale(arr):
+    return [int(n*WIDTH/1440) for n in arr]
 # draw text on screen
 def text(screen, text, color, size, pos, align="left"):
     text = text.encode("utf-8").decode("utf-8")
     try:
-        my_font = pygame.font.Font('media/LXGWMarkerGothic-Regular.ttf', size)
+        my_font = pygame.font.Font('media/LXGWMarkerGothic-Regular.ttf', transform_scale([size])[0])
     except Exception:
-        my_font = pygame.font.Font(pygame.font.get_default_font(), size)
+        my_font = pygame.font.Font(pygame.font.get_default_font(), transform_scale([size])[0])
     text_surface = my_font.render(text, True, color)
     if align == "left":
         screen.blit(text_surface, pos)
@@ -17,9 +26,9 @@ def text(screen, text, color, size, pos, align="left"):
 def text_sp(screen, text, color, size, pos, alpla, align="left"):
     text = text.encode("utf-8").decode("utf-8")
     try:
-        my_font = pygame.font.Font('media/YujiSyuku-Regular.ttf', size)
+        my_font = pygame.font.Font('media/YujiSyuku-Regular.ttf', transform_scale([size])[0])
     except Exception:
-        my_font = pygame.font.Font(pygame.font.get_default_font(), size)
+        my_font = pygame.font.Font(pygame.font.get_default_font(), transform_scale([size])[0])
     text_surface = my_font.render(text, True, color)
     text_surface.set_alpha(alpla)
     if align == "left":
@@ -511,11 +520,8 @@ def click_check(pos, rect_prop):
 
 
 def main():
-    #basic set up for pygame
-    pygame.init()
-    pygame.font.init()
-    WIDTH  = int(pygame.display.Info().current_w * 0.65)
-    HEIGHT = int(WIDTH/1440*960)
+
+    
     
     os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % ((pygame.display.get_desktop_sizes()[0][0]-WIDTH)/2, 20)
     
@@ -576,7 +582,7 @@ def main():
     no_of_qs = 3
     no_of_heart = 3
     heart = pygame.image.load("media/heart.png").convert_alpha()
-    heart = pygame.transform.scale(heart, [32, 32])
+    heart = pygame.transform.scale(heart, transform_scale([32, 32]))
 
     kara = "masu"
     made = "masu"
@@ -590,15 +596,15 @@ def main():
     win_lose_effect_timer = 0
     images = [
         pygame.transform.scale(pygame.image.load("media/dungeon_crystal_1.png"), [WIDTH, HEIGHT]),  # 0
-        pygame.transform.scale(pygame.image.load("media/title_text.png"), [816, 144]),              # 1
-        pygame.transform.scale(pygame.image.load("media/press_to_start.png"), [269, 36]),           # 2
+        pygame.transform.scale(pygame.image.load("media/title_text.png"), transform_scale([816, 144])),              # 1
+        pygame.transform.scale(pygame.image.load("media/press_to_start.png"), transform_scale([269, 36])),           # 2
         pygame.transform.scale(pygame.image.load("media/forest_1.png"), [WIDTH, HEIGHT]),           # 3
-        pygame.transform.scale(pygame.image.load("media/main_char.png"), [640, 768]),               # 4
-        pygame.transform.scale(pygame.image.load("media/teacher_no_glasses.png"), [517, 680]),      # 5
-        pygame.transform.scale(pygame.image.load("media/skip.png"), [310, 80]),                     # 6
-        pygame.transform.scale(pygame.image.load("media/main_char_gray.png"), [640, 768]),          # 7
-        pygame.transform.scale(pygame.image.load("media/teacher_no_glasses_gray.png"), [517, 680]), # 8
-        pygame.transform.scale(pygame.image.load("media/purple_slime_1.png"), [532, 572]),          # 9
+        pygame.transform.scale(pygame.image.load("media/main_char.png"), transform_scale([640, 768])),               # 4
+        pygame.transform.scale(pygame.image.load("media/teacher_no_glasses.png"), transform_scale([517, 680])),      # 5
+        pygame.transform.scale(pygame.image.load("media/skip.png"), transform_scale([310, 80])),                     # 6
+        pygame.transform.scale(pygame.image.load("media/main_char_gray.png"), transform_scale([640, 768])),          # 7
+        pygame.transform.scale(pygame.image.load("media/teacher_no_glasses_gray.png"), transform_scale([517, 680])), # 8
+        pygame.transform.scale(pygame.image.load("media/purple_slime_1.png"),transform_scale([532, 572])),          # 9
     ]
 
     # 基礎言靈魔法表示: <あ>
@@ -710,9 +716,9 @@ def main():
             r.center = screen.get_rect().center
             screen.blit(images[1], r)
 
-            # play button
+            # press any button to start text
             images[2].set_alpha(int(205+math.sin(menu_effect_timer)*50))
-            screen.blit(images[2], (586, 787))
+            screen.blit(images[2], transform_scale([586, 787]))
             menu_effect_timer += 0.1
             if menu_effect_timer > 100000:
                 menu_effect_timer = 0
@@ -780,22 +786,22 @@ def main():
                 # left character
                 talking = int(dialog[story_num][dialog_num][0])
                 if talking == 1 or talking == 0:
-                    screen.blit(images[4], (-139, 218))
+                    screen.blit(images[4], transform_scale([-139, 218]))
                 else:
-                    screen.blit(images[7], (-139, 218))
+                    screen.blit(images[7], transform_scale([-139, 218]))
 
                 # right character
                 if talking == 2 or talking == 0:
-                    screen.blit(images[5], (1013, 280))
+                    screen.blit(images[5], transform_scale([1013, 280]))
                 else:
-                    screen.blit(images[8], (1013, 280))
+                    screen.blit(images[8], transform_scale([1013, 280]))
 
                 # skip button
-                screen.blit(images[6], (1111, 35))
+                screen.blit(images[6], transform_scale([1111, 35]))
 
                 # dialog box
-                pygame.draw.rect(screen, pygame.Color("#e8e8e8"), [123, 766, 1193, 184], border_radius=5)
-                text(screen, dialog[story_num][dialog_num][1], (0, 0, 0), 48, [153, 776])
+                pygame.draw.rect(screen, pygame.Color("#e8e8e8"), transform_scale([123, 766, 1193, 184]), border_radius=5)
+                text(screen, dialog[story_num][dialog_num][1], (0, 0, 0), 48, transform_scale([153, 776]))
 
                 # effect effect
                 if (dialog[story_num][dialog_num][0] == 1.1):
@@ -807,7 +813,7 @@ def main():
                 if (dialog[story_num][dialog_num][0] == 2.1):
                     if(time > 0 and time < fps*2):
                         time += 1
-                        text_sp(screen, "か", (120, 255, 120), 200, [220, 520], int((fps*2-time)/(fps*2)*255), "center")
+                        text_sp(screen, "か", (120, 255, 120), 200, transform_scale([220, 520]), int((fps*2-time)/(fps*2)*255), "center")
                     elif(time >= fps*2):
                         time = 0
                     
@@ -818,7 +824,7 @@ def main():
                         running = False
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         if pygame.mouse.get_pressed()[0]:
-                            if click_check(pygame.mouse.get_pos(), [1111, 35, images[6].get_width(), images[6].get_height()]):
+                            if click_check(pygame.mouse.get_pos(), transform_scale([1111, 35, images[6].get_width(), images[6].get_height()])):
                                 dialog_num = len(dialog[story_num])
                             else:
                                 dialog_num += 1
@@ -833,38 +839,38 @@ def main():
                 screen.blit(images[3], (0, 0))
 
                 # right character
-                screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), (959, 263))
-                pygame.draw.rect(screen, pygame.Color("#d9d9d9"), [1130, 0, 310, 80])
-                text(screen, "HP", (0, 0, 0), 24, [1158, 22])
-                pygame.draw.rect(screen, (0, 0, 0), [1209, 34, 204, 13])
-                pygame.draw.rect(screen, (255, 0, 0), [1209, 34, player_hp/100*204, 13])
+                screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), transform_scale([959, 263]))
+                pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([1130, 0, 310, 80]))
+                text(screen, "HP", (0, 0, 0), 24, transform_scale([1158, 22]))
+                pygame.draw.rect(screen, (0, 0, 0), transform_scale([1209, 34, 204, 13]))
+                pygame.draw.rect(screen, (255, 0, 0), transform_scale([1209, 34, player_hp/100*204, 13]))
                 
 
                 # left enemy
-                screen.blit(battle_detail[stage]["enemy_surf"], (-51, 100))
-                pygame.draw.rect(screen, pygame.Color("#d9d9d9"), [0, 0, 310, 80])
-                text(screen, "HP", (0, 0, 0), 24, [28, 22])
-                pygame.draw.rect(screen, (0, 0, 0), [79, 34, 204, 13])
-                pygame.draw.rect(screen, (255, 0, 0), [79, 34, enemy_hp/100*204, 13])
+                screen.blit(battle_detail[stage]["enemy_surf"], transform_scale([-51, 100]))
+                pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([0, 0, 310, 80]))
+                text(screen, "HP", (0, 0, 0), 24, transform_scale([28, 22]))
+                pygame.draw.rect(screen, (0, 0, 0), transform_scale([79, 34, 204, 13]))
+                pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/100*204, 13]))
 
-                pygame.draw.rect(screen, pygame.Color("#d9d9d9"), [324, 552, 791, 408])
+                pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([324, 552, 791, 408]))
                 if action == "attack" or action == "recover":
-                    pygame.draw.rect(screen, pygame.Color("#ececec"), [407, 729, 194, 94])
-                    pygame.draw.rect(screen, pygame.Color("#ececec"), [840, 729, 194, 94])
-                    pygame.draw.rect(screen, pygame.Color("#ececec"), [407, 842, 194, 94])
-                    pygame.draw.rect(screen, pygame.Color("#ececec"), [840, 842, 194, 94])
+                    pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([407, 729, 194, 94]))
+                    pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([840, 729, 194, 94]))
+                    pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([407, 842, 194, 94]))
+                    pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([840, 842, 194, 94]))
 
-                    text(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (0, 0, 0), 64, [688, 601], "center")
+                    text(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (0, 0, 0), 64, transform_scale([688, 601]), "center")
                     
-                    text(screen, battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][0], (0, 0, 0), 64, [504, 776], "center")
-                    text(screen, battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][1], (0, 0, 0), 64, [937, 776], "center")
-                    text(screen, battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][2], (0, 0, 0), 64, [504, 889], "center")
-                    text(screen, battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][3], (0, 0, 0), 64, [937, 889], "center")
+                    text(screen, battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][0], (0, 0, 0), 64, transform_scale([504, 776]), "center")
+                    text(screen, battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][1], (0, 0, 0), 64, transform_scale([937, 776]), "center")
+                    text(screen, battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][2], (0, 0, 0), 64, transform_scale([504, 889]), "center")
+                    text(screen, battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][3], (0, 0, 0), 64, transform_scale([937, 889]), "center")
                 else:
-                    pygame.draw.rect(screen, pygame.Color("#ececec"), [407, 729, 194, 207])
-                    pygame.draw.rect(screen, pygame.Color("#ececec"), [840, 729, 194, 207])
-                    text(screen, "攻擊", (0, 0, 0), 64, [504, 813], "center")
-                    text(screen, "回復", (0, 0, 0), 64, [937, 813], "center")
+                    pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([407, 729, 194, 207]))
+                    pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([840, 729, 194, 207]))
+                    text(screen, "攻擊", (0, 0, 0), 64, transform_scale([504, 813]), "center")
+                    text(screen, "回復", (0, 0, 0), 64, transform_scale([937, 813]), "center")
 
 
                 for event in pygame.event.get():
@@ -883,25 +889,25 @@ def main():
                             pos = pygame.mouse.get_pos()
                             if action == "attack" or action == "recover":
                                if time == 0:
-                                    if click_check(pos, [407, 729, 194, 94]):
+                                    if click_check(pos, transform_scale([407, 729, 194, 94])):
                                         time = 1
                                         if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][0] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
                                             correct = True
                                         else:
                                             correct = False
-                                    elif click_check(pos, [840, 729, 194, 94]):
+                                    elif click_check(pos, transform_scale([840, 729, 194, 94])):
                                         time = 1
                                         if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][1] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
                                             correct = True
                                         else:
                                             correct = False
-                                    elif click_check(pos, [407, 842, 194, 94]):
+                                    elif click_check(pos, transform_scale([407, 842, 194, 94])):
                                         time = 1
                                         if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][2] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
                                             correct = True
                                         else:
                                             correct = False
-                                    elif click_check(pos, [840, 842, 194, 94]):
+                                    elif click_check(pos, transform_scale([840, 842, 194, 94])):
                                         time = 1
                                         if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][3] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
                                             correct = True
@@ -910,16 +916,16 @@ def main():
 
                                 
                             else:
-                                if click_check(pos, [407, 729, 194, 207]):
+                                if click_check(pos, transform_scale([407, 729, 194, 207])):
                                     action = "attack"
-                                elif click_check(pos, [840, 729, 194, 207]):
+                                elif click_check(pos, transform_scale([840, 729, 194, 207])):
                                     action = "recover"
 
                 if correct == True:
                     if action == "attack":
                         if(time > 0 and time < fps*2):
                             time += 1
-                            text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 0, 0), 200, [220, 330], int((fps*2-time)/(fps*2)*255), "center")
+                            text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 0, 0), 200, transform_scale([220, 330]), int((fps*2-time)/(fps*2)*255), "center")
                         elif(time >= fps*2):
                             time = 0
                         if time == 0:
@@ -942,7 +948,7 @@ def main():
                     if action == "attack":
                         if(time > 0 and time < fps*2):
                             time += 1
-                            text_sp(screen, battle_detail[stage]["enemy_attack_word"], (120, 0, 120), 200, [1310, 520], int((fps*2-time)/(fps*2)*255), "center")
+                            text_sp(screen, battle_detail[stage]["enemy_attack_word"], (120, 0, 120), 200, transform_scale([1310, 520]), int((fps*2-time)/(fps*2)*255), "center")
                         elif(time >= fps*2):
                             time = 0
                         if time == 0:
@@ -1716,19 +1722,19 @@ def main():
             screen.blit(images[3], (0, 0))
 
             # right character
-            screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), (959, 263))
-            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), [1130, 0, 310, 80])
-            text(screen, "HP", (0, 0, 0), 24, [1158, 22])
-            pygame.draw.rect(screen, (0, 0, 0), [1209, 34, 204, 13])
-            pygame.draw.rect(screen, (255, 0, 0), [1209, 34, player_hp/100*204, 13])
+            screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), transform_scale([959, 263]))
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([1130, 0, 310, 80]))
+            text(screen, "HP", (0, 0, 0), 24, transform_scale([1158, 22]))
+            pygame.draw.rect(screen, (0, 0, 0), transform_scale([1209, 34, 204, 13]))
+            pygame.draw.rect(screen, (255, 0, 0), transform_scale([1209, 34, player_hp/100*204, 13]))
             
 
             # left enemy
-            screen.blit(battle_detail[stage]["enemy_surf"], (-51, 100))
-            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), [0, 0, 310, 80])
-            text(screen, "HP", (0, 0, 0), 24, [28, 22])
-            pygame.draw.rect(screen, (0, 0, 0), [79, 34, 204, 13])
-            pygame.draw.rect(screen, (255, 0, 0), [79, 34, enemy_hp/100*204, 13])
+            screen.blit(battle_detail[stage]["enemy_surf"], transform_scale([-51, 100]))
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([0, 0, 310, 80]))
+            text(screen, "HP", (0, 0, 0), 24, transform_scale([28, 22]))
+            pygame.draw.rect(screen, (0, 0, 0), transform_scale([79, 34, 204, 13]))
+            pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/100*204, 13]))
 
             s.set_alpha(125)
             screen.blit(s, (0,0))

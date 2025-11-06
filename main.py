@@ -5,7 +5,7 @@ from copy import deepcopy
 pygame.init()
 pygame.font.init()
 
-new_game = True
+new_game = False
 
 save = {
     'unlock': [True, False],
@@ -1069,10 +1069,12 @@ while running:
                             if (len(battle_detail[stage]["order"]) <= battle_detail[stage]["target"][0]):
                                 save["star"][stage] = 3
                             elif (len(battle_detail[stage]["order"]) <= battle_detail[stage]["target"][1]):
-                                save["star"][stage] = 2
+                                if save["star"][stage] < 2:
+                                    save["star"][stage] = 2
                             else:
-                                save["star"][stage] = 1
-                            if len(save["unlock"])<save["current_stage"]+1:
+                                if save["star"][stage] < 1:
+                                    save["star"][stage] = 1
+                            if len(save["unlock"])>save["current_stage"]+1:
                                 save["unlock"][save["current_stage"]+1]=True
                             write()
                             game_state = "win"

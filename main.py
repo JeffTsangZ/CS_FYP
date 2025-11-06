@@ -5,6 +5,8 @@ from copy import deepcopy
 pygame.init()
 pygame.font.init()
 
+new_game = True
+
 save = {
     'unlock': [True, False],
     'star': [0, 0],
@@ -550,16 +552,17 @@ def click_check(pos, rect_prop):
     return False
 
 def load():
+    global save
     try:
         with open('udata.sf') as load_file:
             save = deepcopy(json.load(load_file))
+            print("Loaded data:", save)
     except:
-        save = {
-            'unlock': [True, False],
-            'star': [0, 0]
-        }
+        print("File not found. Creating a new one.")
         with open('udata.sf', 'w') as store_file:
             json.dump(deepcopy(save), store_file)
+
+
 
 def write():
     with open('udata.sf', 'w') as store_data:
@@ -613,10 +616,16 @@ fps = 60
 
 load()
 
+if new_game:
+    save = {
+        'unlock': [True, False],
+        'star': [0, 0],
+        'current_stage': 0,
+    }
 # question bank: verb form convertion
 # size: 27
-choose_list = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-not_chosen_list = []
+# choose_list = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# not_chosen_list = []
 
 verb = {
         "verb_ru": ["いる", "行く", "来る", "帰る", "出掛ける", "する", "食べる", "飲む", "見る", "読む", "書く", "聞く", "買う", "起きる", "寝る", "乗る", "売る", "降(お)りる", "迎える", "会う", "働く", "休む", "入る", "出る", "着る", "履く", "脱ぐ", "座る", "渡る", "通る", "置く", "使う", "刺す", "押す", "話す", "言う", "替える", "走る", "戻る", "泊まる", "止める", "教える", "習う", "泳ぐ", "弾く", "開ける", "閉める", "付ける", "消す", "洗う", "入れる", "取る", "打つ", "作る", "焼く", "歩く", "曲がる"],
@@ -660,25 +669,29 @@ verb = {
 
 }
 # basic initialize of variables for the game loop
-game_state = "select_stage"          # this determine initial gamestate
+game_state = "menu"          # this determine initial gamestate
 running = True
-inputArr = ""
-outputArr = ""
-no_of_qs = 3
-no_of_heart = 3
-heart = pygame.image.load("media/heart.png").convert_alpha()
-heart = pygame.transform.scale(heart, transform_scale([32, 32]))
 
-kara = "masu"
-made = "masu"
-verb = ""
-pause = False
-temptime = pygame.time.get_ticks()
-score = 0
-prevScore = 0
-time = 0
-menu_effect_timer = 0
-win_lose_effect_timer = 0
+# inputArr = ""
+# outputArr = ""
+# no_of_qs = 3
+# no_of_heart = 3
+# heart = pygame.image.load("media/heart.png").convert_alpha()
+# heart = pygame.transform.scale(heart, transform_scale([32, 32]))
+# kara = "masu"                               
+# made = "masu"                               
+# verb = ""                                   
+# pause = False                               
+# temptime = pygame.time.get_ticks()          
+# score = 0                                
+# prevScore = 0       
+
+
+time = 0                                
+menu_effect_timer = 0                        
+win_lose_effect_timer = 0    
+
+
 images = [
     pygame.transform.scale(pygame.image.load("media/dungeon_crystal_1.png"), [WIDTH, HEIGHT]),                   # 0
     pygame.transform.scale(pygame.image.load("media/title_text.png"), transform_scale([816, 144])),              # 1
@@ -702,7 +715,7 @@ images = [
     pygame.transform.scale(pygame.image.load("media/stage_type_2_img_dark.png"),transform_scale([847, 635])),    #19
     pygame.transform.scale(pygame.image.load("media/stage_type_2_img_light.png"),transform_scale([847, 635])),   #20
     pygame.transform.scale(pygame.image.load("media/stage2_title.png"),transform_scale([185, 60])),              #21
-
+    pygame.transform.scale(pygame.image.load("media/continue.png"),transform_scale([520, 110])),                 #22
     
 
 ]
@@ -792,6 +805,30 @@ battle_detail = [
         "order": [],
         "enemy_surf": pygame.transform.flip(images[9], flip_x=True, flip_y=False),
         "enemy_attack_word": "む" ,
+        "target": [5, 7],
+        "enemy_hp": 100,
+    },
+    # 1
+    {
+        "question_type": "MC",
+        "question": ["か","き","く","け","こ", "が","ぎ","ぐ","げ","ご"],
+        "answer": {
+            "か": ("ka", ["ka", "ga", "ha", "wa"]),
+            "き": ("ki", ["ki", "sa", "chi", "gi"]),
+            "く": ("ku", ["ka", "ga", "ku", "su"]),
+            "け": ("ke", ["ke", "ka", "ki", "gi"]),
+            "こ": ("ko", ["ko", "go", "wo", "ka"]),
+            "が": ("ga", ["ga", "ka", "na", "ra"]),
+            "ぎ": ("gi", ["gi", "ki", "shi", "bi"]),
+            "ぐ": ("gu", ["gu", "ku", "su", "bu"]),
+            "げ": ("ge", ["ge", "ke", "ko", "go"]),
+            "ご": ("go", ["go", "ko", "so", "ga"])
+        },
+        "order": [],
+        "enemy_surf": pygame.transform.flip(images[9], flip_x=True, flip_y=False),
+        "enemy_attack_word": "む" ,
+        "target": [10, 14],
+        "enemy_hp": 200,
     }
 ]
 player_hp = 100
@@ -838,10 +875,15 @@ while running:
                     if (time == 0):
                         time += 1
 
-        # enter story
+        # enter game
         if(time > fps*2):
-            game_state = "story"
-            story_num = 0     # will change after adding save load function
+            print(save["unlock"])
+            if save["unlock"][1]:
+                game_state = "select_stage"
+                time=0
+            else:
+                game_state = "story"
+            story_num = 0
             dialog_num = 0
             time = 0
                     
@@ -859,15 +901,16 @@ while running:
             # no_of_heart = 3
 
             game_state = "playing"
-            player_hp = 100
-            enemy_hp = 100
+            
             battle_detail[stage]["order"] = []
             stage = story_num
+            player_hp = 100
+            enemy_hp = battle_detail[stage]["enemy_hp"]
 
             battle_detail[stage]["order"].append(random.randint(0, len(battle_detail[stage]["question"])-1))
 
             if stage == 0:
-                action = "recover"
+                action = "attack"
             else:
                 action = None
             question_num = 0
@@ -945,7 +988,7 @@ while running:
             pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([0, 0, 310, 80]))
             text(screen, "HP", (0, 0, 0), 24, transform_scale([28, 22]))
             pygame.draw.rect(screen, (0, 0, 0), transform_scale([79, 34, 204, 13]))
-            pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/100*204, 13]))
+            pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/battle_detail[stage]["enemy_hp"]*204, 13]))
 
             pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([324, 552, 791, 408]))
             if action == "attack" or action == "recover":
@@ -971,13 +1014,6 @@ while running:
                 # allow close game
                 if event.type == pygame.QUIT:
                     running = False
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RIGHT:
-                        question_num += 1
-                        if question_num >= battle_detail[stage]["num_of_qs"]:
-                            game_state = "menu"
-                        else:
-                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if pygame.mouse.get_pressed()[0]:
                         pos = pygame.mouse.get_pos()
@@ -1015,10 +1051,10 @@ while running:
 
             if correct == True:
                 if action == "attack":
-                    if(time > 0 and time < fps*2):
+                    if(time > 0 and time < fps*1):
                         time += 1
-                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 0, 0), 200, transform_scale([220, 330]), int((fps*2-time)/(fps*2)*255), "center")
-                    elif(time >= fps*2):
+                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 0, 0), 200, transform_scale([220, 330]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
                         time = 0
                     if time == 0:
                         enemy_hp -= 20
@@ -1029,38 +1065,45 @@ while running:
                             action = None
                         question_num += 1
                         if enemy_hp <= 0:
-                            time = 0
+                            time = -1*fps
+                            if (len(battle_detail[stage]["order"]) <= battle_detail[stage]["target"][0]):
+                                save["star"][stage] = 3
+                            elif (len(battle_detail[stage]["order"]) <= battle_detail[stage]["target"][1]):
+                                save["star"][stage] = 2
+                            else:
+                                save["star"][stage] = 1
+                            if len(save["unlock"])<save["current_stage"]+1:
+                                save["unlock"][save["current_stage"]+1]=True
+                            write()
                             game_state = "win"
                         else:
                             temp = random.randint(0, len(battle_detail[stage]["question"])-1)
                             while temp == battle_detail[stage]["order"][-1]:
                                 temp = random.randint(0, len(battle_detail[stage]["question"])-1)
                             battle_detail[stage]["order"].append(temp)
+                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
                 elif action == "recover":
-                    if(time > 0 and time < fps*2):
+                    if(time > 0 and time < fps*1):
                         time += 1
-                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*2-time)/(fps*2)*255), "center")
-                    elif(time >= fps*2):
+                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
                         time = 0
                     if time == 0:
+                        player_hp = min(player_hp+20, 100)
                         correct = None
                         action = None
                         question_num += 1
-                        if player_hp <= 0:
-                            time = 0
-                            game_state = "menu"
-                        else:
+                        temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                        while temp == battle_detail[stage]["order"][-1]:
                             temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                            while temp == battle_detail[stage]["order"][-1]:
-                                temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                            battle_detail[stage]["order"].append(temp)
-
+                        battle_detail[stage]["order"].append(temp)
+                        random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
             elif correct == False:
                 if action == "attack":
-                    if(time > 0 and time < fps*2):
+                    if(time > 0 and time < fps*1):
                         time += 1
-                        text_sp(screen, battle_detail[stage]["enemy_attack_word"], (120, 0, 120), 200, transform_scale([1310, 520]), int((fps*2-time)/(fps*2)*255), "center")
-                    elif(time >= fps*2):
+                        text_sp(screen, battle_detail[stage]["enemy_attack_word"], (120, 0, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
                         time = 0
                     if time == 0:
                         player_hp -= 40
@@ -1071,34 +1114,35 @@ while running:
                             action = None
                         question_num += 1
                         if player_hp <= 0:
-                            time = 0
+                            time = -1*fps
                             game_state = "lose"
                         else:
                             temp = random.randint(0, len(battle_detail[stage]["question"])-1)
                             while temp == battle_detail[stage]["order"][-1]:
                                 temp = random.randint(0, len(battle_detail[stage]["question"])-1)
                             battle_detail[stage]["order"].append(temp)
+                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
                 elif action == "recover":
-                    if(time > 0 and time < fps*2):
+                    if(time > 0 and time < fps*1):
                         time += 1
-                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*2-time)/(fps*2)*255), "center")
-                        text_sp(screen, "╳", (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*2-time)/(fps*2)*255), "center")
-                    elif(time >= fps*2):
+                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                        text_sp(screen, "╳", (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
                         time = 0
                     if time == 0:
+                        player_hp -= 10
                         correct = None
                         action = None
                         question_num += 1
                         if player_hp <= 0:
-                            time = 0
-                            game_state = "menu"
+                            time = -1*fps
+                            game_state = "lose"
                         else:
                             temp = random.randint(0, len(battle_detail[stage]["question"])-1)
                             while temp == battle_detail[stage]["order"][-1]:
                                 temp = random.randint(0, len(battle_detail[stage]["question"])-1)
                             battle_detail[stage]["order"].append(temp)
-
-
+                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
         else:
             for event in pygame.event.get():
                 # allow close game
@@ -1512,18 +1556,35 @@ while running:
         elif save['star'][save['current_stage']] == 3:
             screen.blit(images[16], transform_scale([540, 139]))
 
+        if(time != 0):
+            time += 1
+            s.set_alpha(int(time/fps/2*255))
+            screen.blit(s, (0,0))
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                print(save['current_stage'])
                 if pygame.mouse.get_pressed()[0]:
                     if click_check(pygame.mouse.get_pos(), transform_scale([1186, 424, 75, 110])):
                         if (save['current_stage']+1 < len(save["star"])):
                             save['current_stage'] += 1
+                            write()
                     if click_check(pygame.mouse.get_pos(), transform_scale([162, 424, 75, 110])):
                         if (save['current_stage'] > 0):
                             save['current_stage'] -= 1
+                            write()
+                    if click_check(pygame.mouse.get_pos(), transform_scale([297, 198, 847, 635])):
+                        if (save['unlock'][save["current_stage"]]):
+                            if (time == 0):
+                                time += 1
+        # enter story
+        if(time > fps*2):
+            game_state = "story"
+            story_num = save["current_stage"]
+            dialog_num = 0
+            time = 0
+
 
     # game state for seleting stage: from <text1>
     if game_state == "select_kara":
@@ -1889,21 +1950,43 @@ while running:
         pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([0, 0, 310, 80]))
         text(screen, "HP", (0, 0, 0), 24, transform_scale([28, 22]))
         pygame.draw.rect(screen, (0, 0, 0), transform_scale([79, 34, 204, 13]))
-        pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/100*204, 13]))
+        pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/battle_detail[stage]["enemy_hp"]*204, 13]))
 
+        # darken the screen
         s.set_alpha(125)
         screen.blit(s, (0,0))
 
+        # continue
+        if (time>=0):
+            screen.blit(images[22], transform_scale([460, 760]))
+            text(screen, "繼續", (0, 0, 0), transform_scale([50])[0], transform_scale([720, 815]), "center")
+        
         if game_state == "win":
-            text_sp(screen, "靈\n殺", (200, 200, 200), 200, [WIDTH/2, HEIGHT/2], 255, "center")
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
+            text_sp(screen, "靈\n殺", (200, 200, 200), transform_scale([200])[0], [WIDTH/2, HEIGHT/2], 255, "center")
         elif game_state == "lose":
-            text_sp(screen, "死", (150, 0, 0), 200, [WIDTH/2, HEIGHT/2], 255, "center")
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
+            text_sp(screen, "死", (150, 0, 0), transform_scale([200])[0], [WIDTH/2, HEIGHT/2], 255, "center")
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                    if pygame.mouse.get_pressed()[0]:
+                        if click_check(pygame.mouse.get_pos(), transform_scale([460, 760, 520, 110])):
+                            if (time == 0):
+                                time += 1
+        if (time<0):
+            time += 1
+
+        if(time > 0):
+            time += 1
+            s.set_alpha(int(time/fps/1*255))
+            screen.blit(s, (0,0))
+
+        # enter story
+        if(time > fps*1):
+            game_state = "select_stage"
+            time = 0
+
 
         
 

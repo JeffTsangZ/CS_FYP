@@ -605,7 +605,7 @@ def draw_stage_selection(n):
             center = 17 # Type 1 light
         else:
             center = 18 # Type 1 dark
-        title = 23 # new add image
+        title = 21 # new add image
         next = None
         prev = 19
 
@@ -732,7 +732,7 @@ images = [
     pygame.transform.scale(pygame.image.load("media/stage_type_2_img_light.png"),transform_scale([847, 635])),   #20
     pygame.transform.scale(pygame.image.load("media/stage2_title.png"),transform_scale([185, 60])),              #21
     pygame.transform.scale(pygame.image.load("media/continue.png"),transform_scale([520, 110])),                 #22
-    #pygame.transform.scale(pygame.image.load("media/"),transform_scale([200,60]))                                #23
+    #pygame.transform.scale(pygame.image.load("media/stage3_title"),transform_scale([200,60]))                    #23
 
 ]
 
@@ -812,8 +812,14 @@ dialog = [
 # 0: both gray; 1: left talking; 2: right talking; 3: both talking
 story_num = 0
 dialog_num = 0
-
-
+draggable_rects = []
+draggable_rects_initial_pos = []
+dragged_item_index = -1
+is_dragging = False
+drag_offset_x = 0
+drag_offset_y = 0
+drop_target_rect = pygame.Rect(0,0,0,0) # Initialize with a dummy rect
+parts =[]
 # question type: MC, Drag, input
 battle_detail = [
     # 0
@@ -872,6 +878,7 @@ battle_detail = [
         "enemy_hp": 250,
     }
 ]
+
 player_hp = 100
 enemy_hp = 100
 stage = 0
@@ -948,7 +955,26 @@ while running:
             player_hp = 100
             enemy_hp = battle_detail[stage]["enemy_hp"]
 
-            battle_detail[stage]["order"].append(random.randint(0, len(battle_detail[stage]["question"])-1))
+            #battle_detail[stage]["order"].append(random.randint(0, len(battle_detail[stage]["question"])-1))
+
+            if battle_detail[stage]["question_type"] == "MC":
+                battle_detail[stage]["order"] = []
+                # Get the first random question for the MC battle
+                first_q_index = random.randint(0, len(battle_detail[stage]["question"])-1)
+                battle_detail[stage]["order"].append(first_q_index)
+                
+                # **SOLUTION**: The shuffle line is now safely inside the MC block
+                random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][first_q_index]][1])
+
+            elif battle_detail[stage]["question_type"] == "Drag":
+                # For Drag type, create a shuffled list of all question indices
+                battle_detail[stage]["order"] = list(range(len(battle_detail[stage]["questions"])))
+                random.shuffle(battle_detail[stage]["order"])
+                # Make sure the UI elements are cleared before the battle starts
+                draggable_rects.clear() 
+                draggable_rects_initial_pos.clear()
+                is_dragging = False
+                dragged_item_index = -1
 
             if stage == 0:
                 action = "attack"
@@ -956,7 +982,6 @@ while running:
                 action = None
             question_num = 0
             correct = None
-            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
         else:
             # BG image
             screen.blit(images[3], (0, 0))
@@ -1012,31 +1037,37 @@ while running:
                                     time = 1
 
     if game_state == "playing":
-        if battle_detail[stage]["question_type"] == "MC":
-            # BG image
-            screen.blit(images[3], (0, 0))
 
-            # right character
-            screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), transform_scale([959, 263]))
-            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([1130, 0, 310, 80]))
-            text(screen, "HP", (0, 0, 0), 24, transform_scale([1158, 22]))
-            pygame.draw.rect(screen, (0, 0, 0), transform_scale([1209, 34, 204, 13]))
-            pygame.draw.rect(screen, (255, 0, 0), transform_scale([1209, 34, player_hp/100*204, 13]))
+        # BG image
+        screen.blit(images[3], (0, 0))
+
+        # right character
+        screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), transform_scale([959, 263]))
+        pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([1130, 0, 310, 80]))
+        text(screen, "HP", (0, 0, 0), 24, transform_scale([1158, 22]))
+        pygame.draw.rect(screen, (0, 0, 0), transform_scale([1209, 34, 204, 13]))
+        pygame.draw.rect(screen, (255, 0, 0), transform_scale([1209, 34, player_hp/100*204, 13]))
             
 
-            # left enemy
-            screen.blit(battle_detail[stage]["enemy_surf"], transform_scale([-51, 100]))
-            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([0, 0, 310, 80]))
-            text(screen, "HP", (0, 0, 0), 24, transform_scale([28, 22]))
-            pygame.draw.rect(screen, (0, 0, 0), transform_scale([79, 34, 204, 13]))
-            pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/battle_detail[stage]["enemy_hp"]*204, 13]))
+        # left enemy
+        screen.blit(battle_detail[stage]["enemy_surf"], transform_scale([-51, 100]))
+        pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([0, 0, 310, 80]))
+        text(screen, "HP", (0, 0, 0), 24, transform_scale([28, 22]))
+        pygame.draw.rect(screen, (0, 0, 0), transform_scale([79, 34, 204, 13]))
+        pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/battle_detail[stage]["enemy_hp"]*204, 13]))
 
+
+        if battle_detail[stage]["question_type"] == "MC":
             pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([324, 552, 791, 408]))
             if action == "attack" or action == "recover":
                 pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([407, 729, 194, 94]))
                 pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([840, 729, 194, 94]))
                 pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([407, 842, 194, 94]))
                 pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([840, 842, 194, 94]))
+
+                q_index = battle_detail[stage]["order"][question_num]
+                question_text = battle_detail[stage]["question"][q_index]
+                answers = battle_detail[stage]["answer"][question_text][1]
 
                 text(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (0, 0, 0), 64, transform_scale([688, 601]), "center")
                 
@@ -1049,153 +1080,50 @@ while running:
                 pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([840, 729, 194, 207]))
                 text(screen, "攻擊", (0, 0, 0), 64, transform_scale([504, 813]), "center")
                 text(screen, "回復", (0, 0, 0), 64, transform_scale([937, 813]), "center")
-
-
-            for event in pygame.event.get():
-                # allow close game
-                if event.type == pygame.QUIT:
-                    running = False
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if pygame.mouse.get_pressed()[0]:
-                        pos = pygame.mouse.get_pos()
-                        if action == "attack" or action == "recover":
-                            if time == 0:
-                                if click_check(pos, transform_scale([407, 729, 194, 94])):
-                                    time = 1
-                                    if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][0] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
-                                        correct = True
-                                    else:
-                                        correct = False
-                                elif click_check(pos, transform_scale([840, 729, 194, 94])):
-                                    time = 1
-                                    if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][1] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
-                                        correct = True
-                                    else:
-                                        correct = False
-                                elif click_check(pos, transform_scale([407, 842, 194, 94])):
-                                    time = 1
-                                    if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][2] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
-                                        correct = True
-                                    else:
-                                        correct = False
-                                elif click_check(pos, transform_scale([840, 842, 194, 94])):
-                                    time = 1
-                                    if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][3] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
-                                        correct = True
-                                    else:
-                                        correct = False
-                        else:
-                            if click_check(pos, transform_scale([407, 729, 194, 207])):
-                                action = "attack"
-                            elif click_check(pos, transform_scale([840, 729, 194, 207])):
-                                action = "recover"
-
-            if correct == True:
-                if action == "attack":
-                    if(time > 0 and time < fps*1):
-                        time += 1
-                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 0, 0), 200, transform_scale([220, 330]), int((fps*1-time)/(fps*1)*255), "center")
-                    elif(time >= fps*1):
-                        time = 0
-                    if time == 0:
-                        enemy_hp -= 20
-                        correct = None
-                        if stage == 0:
-                            action = "attack"
-                        else:
-                            action = None
-                        question_num += 1
-                        if enemy_hp <= 0:
-                            time = -1*fps
-                            if (len(battle_detail[stage]["order"]) <= battle_detail[stage]["target"][0]):
-                                save["star"][stage] = 3
-                            elif (len(battle_detail[stage]["order"]) <= battle_detail[stage]["target"][1]):
-                                if save["star"][stage] < 2:
-                                    save["star"][stage] = 2
-                            else:
-                                if save["star"][stage] < 1:
-                                    save["star"][stage] = 1
-                            if len(save["unlock"])>save["current_stage"]+1:
-                                save["unlock"][save["current_stage"]+1]=True
-                            write()
-                            game_state = "win"
-                        else:
-                            temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                            while temp == battle_detail[stage]["order"][-1]:
-                                temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                            battle_detail[stage]["order"].append(temp)
-                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
-                elif action == "recover":
-                    if(time > 0 and time < fps*1):
-                        time += 1
-                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
-                    elif(time >= fps*1):
-                        time = 0
-                    if time == 0:
-                        player_hp = min(player_hp+20, 100)
-                        correct = None
-                        action = None
-                        question_num += 1
-                        temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                        while temp == battle_detail[stage]["order"][-1]:
-                            temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                        battle_detail[stage]["order"].append(temp)
-                        random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
-            elif correct == False:
-                if action == "attack":
-                    if(time > 0 and time < fps*1):
-                        time += 1
-                        text_sp(screen, battle_detail[stage]["enemy_attack_word"], (120, 0, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
-                    elif(time >= fps*1):
-                        time = 0
-                    if time == 0:
-                        player_hp -= 40
-                        correct = None
-                        if stage == 0:
-                            action = "attack"
-                        else:
-                            action = None
-                        question_num += 1
-                        if player_hp <= 0:
-                            time = -1*fps
-                            game_state = "lose"
-                        else:
-                            temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                            while temp == battle_detail[stage]["order"][-1]:
-                                temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                            battle_detail[stage]["order"].append(temp)
-                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
-                elif action == "recover":
-                    if(time > 0 and time < fps*1):
-                        time += 1
-                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
-                        text_sp(screen, "╳", (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
-                    elif(time >= fps*1):
-                        time = 0
-                    if time == 0:
-                        player_hp -= 10
-                        correct = None
-                        action = None
-                        question_num += 1
-                        if player_hp <= 0:
-                            time = -1*fps
-                            game_state = "lose"
-                        else:
-                            temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                            while temp == battle_detail[stage]["order"][-1]:
-                                temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                            battle_detail[stage]["order"].append(temp)
-                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
-
+        
         elif battle_detail[stage]["question_type"] == "Drag":
             q_index = battle_detail[stage]["order"][question_num]
             current_q = battle_detail[stage]["questions"][q_index]
+            
+            # Create rects for options if they don't exist for the current question
             if not draggable_rects:
-                sentence = current_q["sentence"]
-                parts = sentence.split('_')
-                drop_target_rect = pygame.Rect(...)
-                pygame.draw.rect(screen, (0,0,0), drop_target_rect, 3, 5)
+                options = current_q["options"]
+                option_y = transform_scale([800])[0]
+                option_width, option_height = transform_scale([180, 90])
+                total_width = len(options) * option_width + (len(options) - 1) * 20
+                start_x = (WIDTH - total_width) / 2
+                for i, option_text in enumerate(options):
+                    rect = pygame.Rect(start_x + i * (option_width + 20), option_y, option_width, option_height)
+                    draggable_rects.append(rect)
+                    draggable_rects_initial_pos.append(rect.copy())
 
+            # Draw question sentence with a blank
+            sentence = current_q["sentence"]
+            part1_text, separator, part2_text = sentence.partition('_')
+            font_size = 64
+            try: my_font = pygame.font.Font('media/LXGWMarkerGothic-Regular.ttf', transform_scale([font_size])[0])
+            except: my_font = pygame.font.Font(pygame.font.get_default_font(), transform_scale([font_size])[0])
+            
+            part1_surf = my_font.render(part1_text, True, (0,0,0))
+            part2_surf = my_font.render(part2_text, True, (0,0,0))
+            box_width, box_height = transform_scale([120, 80])
+            total_q_width = part1_surf.get_width() + box_width + part2_surf.get_width()
+            
+            start_q_x = (WIDTH - total_q_width) / 2
+            q_y = transform_scale([400])[0]
+            
+            # Draw the first part of the sentence
+            screen.blit(part1_surf, (start_q_x, q_y))
+            
+            # Define the drop target rect and draw it
+            drop_target_rect = pygame.Rect(start_q_x + part1_surf.get_width(), q_y, box_width, box_height)
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), drop_target_rect, border_radius=5)
+            pygame.draw.rect(screen, (0,0,0), drop_target_rect, 3, 5)
+            
+            # Draw the second part of the sentence
+            screen.blit(part2_surf, (drop_target_rect.right, q_y))
+
+            # Draw draggable options
             for i, rect in enumerate(draggable_rects):
                 if i != dragged_item_index: # Don't draw the original if it's being dragged
                     pygame.draw.rect(screen, pygame.Color("#ececec"), rect, border_radius=10)
@@ -1206,34 +1134,42 @@ while running:
                 pygame.draw.rect(screen, pygame.Color("#aaddff"), rect, border_radius=10)
                 text(screen, current_q["options"][dragged_item_index], (0,0,0), 50, rect.center, "center")
 
-            # Drag and drop event handling
-            if battle_detail[stage]["question_type"] == "Drag" and time == 0:
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not is_dragging:
-                    for i, rect in enumerate(draggable_rects):
-                        if rect.collidepoint(event.pos):
-                            is_dragging = True
-                            dragged_item_index = i
-                            # calculate drag offset(not finished)
-                            break
-                elif event.type == pygame.MOUSEMOTION and is_dragging:
-                    draggable_rects[dragged_item_index].center = event.pos
+        # --- 3. Unified Event Loop ---
+        # A single event loop handles input for all question types.
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
-                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1 and is_dragging:
-                    q_index = battle_detail[stage]["order"][question_num]
-                    current_q = battle_detail[stage]["questions"][q_index]
-                    if drop_target_rect.colliderect(draggable_rects[dragged_item_index]):
-                        selected_option = current_q["options"][dragged_item_index]
-                        correct = (selected_option == current_q["answer"])
-                        time = 1
-                    else: # Snap back if not dropped on target
-                        draggable_rects[dragged_item_index] = draggable_rects_initial_pos[dragged_item_index].copy()
-
-                    is_dragging = False
-                    dragged_item_index = -1
-                # [ PRECEDING CODE: EVENT HANDLING ]
-
-            # NEW: Drag and drop event handling
-            if battle_detail[stage]["question_type"] == "Drag" and time == 0:
+            # --- MC-Specific Event Handling ---
+            if battle_detail[stage]["question_type"] == "MC":
+                if event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[0]:
+                    pos = pygame.mouse.get_pos()
+                    if (action == "attack" or action == "recover") and time == 0:
+                        q_index = battle_detail[stage]["order"][question_num]
+                        question_text = battle_detail[stage]["question"][q_index]
+                        correct_answer = battle_detail[stage]["answer"][question_text][0]
+                        answers = battle_detail[stage]["answer"][question_text][1]
+                        
+                        if click_check(pos, transform_scale([407, 729, 194, 94])):
+                            time = 1
+                            correct = (answers[0] == correct_answer)
+                        elif click_check(pos, transform_scale([840, 729, 194, 94])):
+                            time = 1
+                            correct = (answers[1] == correct_answer)
+                        elif click_check(pos, transform_scale([407, 842, 194, 94])):
+                            time = 1
+                            correct = (answers[2] == correct_answer)
+                        elif click_check(pos, transform_scale([840, 842, 194, 94])):
+                            time = 1
+                            correct = (answers[3] == correct_answer)
+                    else:
+                        if click_check(pos, transform_scale([407, 729, 194, 207])):
+                            action = "attack"
+                        elif click_check(pos, transform_scale([840, 729, 194, 207])):
+                            action = "recover"
+            
+            # --- Drag-and-Drop-Specific Event Handling ---
+            elif battle_detail[stage]["question_type"] == "Drag" and time == 0:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not is_dragging:
                     for i, rect in enumerate(draggable_rects):
                         if rect.collidepoint(event.pos):
@@ -1243,21 +1179,22 @@ while running:
                             drag_offset_y = event.pos[1] - rect.y
                             break
                 elif event.type == pygame.MOUSEMOTION and is_dragging:
-                    draggable_rects[dragged_item_index].x = event.pos[0] - drag_offset_x
-                    draggable_rects[dragged_item_index].y = event.pos[1] - drag_offset_y
+                    if dragged_item_index != -1:
+                        draggable_rects[dragged_item_index].x = event.pos[0] - drag_offset_x
+                        draggable_rects[dragged_item_index].y = event.pos[1] - drag_offset_y
                 elif event.type == pygame.MOUSEBUTTONUP and event.button == 1 and is_dragging:
                     q_index = battle_detail[stage]["order"][question_num]
                     current_q = battle_detail[stage]["questions"][q_index]
+                    
                     if drop_target_rect.colliderect(draggable_rects[dragged_item_index]):
                         selected_option = current_q["options"][dragged_item_index]
                         correct = (selected_option == current_q["answer"])
-                        time = 1
-                    else: # Snap back if not dropped on target
+                        time = 1 # Trigger post-answer animation and logic
+                    else: # If not on target, snap back to original position
                         draggable_rects[dragged_item_index] = draggable_rects_initial_pos[dragged_item_index].copy()
-
+                    
                     is_dragging = False
                     dragged_item_index = -1
-
 
         # --- START OF POST-ANSWER LOGIC ---
         # This entire block runs only when the 'correct' variable has been set (i.e., an answer was just submitted).
@@ -1271,7 +1208,11 @@ while running:
                     if(time > 0 and time < fps*1):
                         time += 1
                         # Get the correct text to display for the animation based on question type
-                        q_text = battle_detail[stage]["questions"][battle_detail[stage]["order"][question_num]]["answer"] if battle_detail[stage]["question_type"] == "Drag" else battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]
+                        q_text = ""
+                        if battle_detail[stage]["question_type"] == "Drag":
+                           q_text = battle_detail[stage]["questions"][battle_detail[stage]["order"][question_num]]["answer"]
+                        else: # MC
+                           q_text = battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]
                         text_sp(screen, q_text, (120, 0, 0), 200, transform_scale([220, 330]), int((fps*1-time)/(fps*1)*255), "center")
                     elif(time >= fps*1): time = 0
                     
@@ -1312,7 +1253,6 @@ while running:
                     else: 
                         # Prepare the next question
                         if battle_detail[stage]["question_type"] == "MC":
-                            if question_num >= len(battle_detail[stage]["question"]): question_num=0 # Loop questions
                             temp = random.randint(0, len(battle_detail[stage]["question"])-1)
                             battle_detail[stage]["order"].append(temp)
                             random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][temp]][1])
@@ -1346,7 +1286,6 @@ while running:
                     else: 
                         # Prepare the next question
                         if battle_detail[stage]["question_type"] == "MC":
-                            if question_num >= len(battle_detail[stage]["question"]): question_num=0
                             temp = random.randint(0, len(battle_detail[stage]["question"])-1)
                             battle_detail[stage]["order"].append(temp)
                             random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][temp]][1])
@@ -1356,396 +1295,6 @@ while running:
                             if question_num >= len(battle_detail[stage]["order"]):
                                 random.shuffle(battle_detail[stage]["order"])
                                 question_num = 0
-
-        else:
-            for event in pygame.event.get():
-                # allow close game
-                if event.type == pygame.QUIT:
-                    running = False
-                # set up in-game keyboard input
-                if event.type == pygame.KEYDOWN and pause == False:
-                    if event.key == pygame.K_a:
-                        inputArr = inputArr + 'a'
-                    if event.key == pygame.K_b:
-                        inputArr = inputArr + 'b'
-                    if event.key == pygame.K_c:
-                        inputArr = inputArr + 'c'
-                    if event.key == pygame.K_d:
-                        inputArr = inputArr + 'd'
-                    if event.key == pygame.K_e:
-                        inputArr = inputArr + 'e'
-                    if event.key == pygame.K_f:
-                        inputArr = inputArr + 'f'
-                    if event.key == pygame.K_g:
-                        inputArr = inputArr + 'g'
-                    if event.key == pygame.K_h:
-                        inputArr = inputArr + 'h'
-                    if event.key == pygame.K_i:
-                        inputArr = inputArr + 'i'
-                    if event.key == pygame.K_j:
-                        inputArr = inputArr + 'j'
-                    if event.key == pygame.K_k:
-                        inputArr = inputArr + 'k'
-                    if event.key == pygame.K_l:
-                        inputArr = inputArr + 'l'
-                    if event.key == pygame.K_m:
-                        inputArr = inputArr + 'm'
-                    if event.key == pygame.K_n:
-                        inputArr = inputArr + 'n'
-                    if event.key == pygame.K_o:
-                        inputArr = inputArr + 'o'
-                    if event.key == pygame.K_p:
-                        inputArr = inputArr + 'p'
-                    if event.key == pygame.K_q:
-                        inputArr = inputArr + 'q'
-                    if event.key == pygame.K_r:
-                        inputArr = inputArr + 'r'
-                    if event.key == pygame.K_s:
-                        inputArr = inputArr + 's'
-                    if event.key == pygame.K_t:
-                        inputArr = inputArr + 't'
-                    if event.key == pygame.K_u:
-                        inputArr = inputArr + 'u'
-                    if event.key == pygame.K_v:
-                        inputArr = inputArr + 'v'
-                    if event.key == pygame.K_w:
-                        inputArr = inputArr + 'w'
-                    if event.key == pygame.K_x:
-                        inputArr = inputArr + 'x'
-                    if event.key == pygame.K_y:
-                        inputArr = inputArr + 'y'
-                    if event.key == pygame.K_z:
-                        inputArr = inputArr + 'z'
-                    if event.key == pygame.K_BACKSPACE:
-                        inputArr = inputArr[:-1]
-                    outputArr = textinput(inputArr)
-                    if event.key == pygame.K_RETURN:
-                        temptime = pygame.time.get_ticks()
-                        pause = True
-                        inputing = False
-                        qs_answered += 1
-                        # check()
-                        prevScore = score
-                        if made == "jisyo" and outputArr == verb_ru_hira[choise]:
-                            score += 1
-                        elif made == "masu" and outputArr == verb_masu_hira[choise]:
-                            score += 1
-                        elif made == "te" and outputArr == verb_te_hira[choise]:
-                            score += 1
-                        elif made == "ta" and outputArr == verb_ta_hira[choise]:
-                            score += 1
-                        elif made == "nai" and outputArr == verb_nai_hira[choise]:
-                            score += 1
-
-                        elif made == "kanou" and outputArr == verb_kanou_hira[choise]:
-                            score += 1
-                        elif made == "tiugin" and outputArr == verb_ba_hira[choise]:
-                            score += 1
-                        elif made == "mingling" and outputArr == verb_ro_hira[choise]:
-                            score += 1
-                        elif made == "jiheung" and outputArr == verb_ikou_hira[choise]:
-                            score += 1
-                        elif made == "gamji" and outputArr == verb_na_hira[choise]:
-                            score += 1
-
-                        elif made == "sausan" and outputArr == verb_rareru_hira[choise]:
-                            score += 1
-                        elif made == "siyik" and outputArr == verb_saseru_hira[choise]:
-                            score += 1
-                        elif made == "siyiksausan" and outputArr == verb_saseru_rareru_hira[choise]:
-                            score += 1
-
-                        screen.fill((135, 206, 235))
-
-                        # back button
-                        text_input_box = pygame.draw.rect(screen, (20, 20, 20), [64-12, 64, 64, 30])
-                        text_input_box = pygame.draw.rect(screen, (140, 235, 52), [66-12, 66, 64-4, 30-4])
-                        text(screen, "戻る", (0, 0, 0), 16, (64+64/2-12, 64+32/2), "center")
-
-                        # input box (english)
-                        text_input_box = pygame.draw.rect(screen, (200, 200, 200), [200, 250, 400, 64])
-                        text_input_box = pygame.draw.rect(screen, (20, 20, 20), [202, 252, 396, 60])
-                        text(screen, inputArr, (255, 255, 255), 24, (206, 256))
-
-                        # input box (japanese)
-                        text_input_box = pygame.draw.rect(screen, (200, 200, 200), [200, 250 + 96, 400, 64])
-                        text_input_box = pygame.draw.rect(screen, (20, 20, 20), [202, 252 + 96, 396, 60])
-                        text(screen, outputArr, (255, 255, 255), 24, (206, 256 + 96))
-
-                        if kara == "jisyo":
-                            verb = verb_ru[choise]
-                        elif kara == "masu":
-                            verb = verb_masu[choise]
-                        elif kara == "te":
-                            verb = verb_te[choise]
-                        elif kara == "ta":
-                            verb = verb_ta[choise]
-                        elif kara == "nai":
-                            verb = verb_nai[choise]
-
-                        elif kara == "kanou":
-                            verb = verb_kanou[choise]
-                        elif kara == "tiugin":
-                            verb = verb_ba[choise]
-                        elif kara == "mingling":
-                            verb = verb_ro[choise]
-                        elif kara == "jiheung":
-                            verb = verb_ikou[choise]
-                        elif kara == "gamji":
-                            verb = verb_na[choise]
-
-                        elif kara == "sausan":
-                            verb = verb_rareru[choise]
-                        elif kara == "siyik":
-                            verb = verb_saseru[choise]
-                        elif kara == "siyiksausan":
-                            verb = verb_saseru_rareru[choise]
-                            
-                        text(screen, str(qs_answered) + ") " + verb, (0, 0, 0), 24, (206, 186))
-                        text(screen, "スコア: " + str(score), (0, 0, 0), 24, (550, 120))
-
-                        text1 = ""
-                        if kara == "jisyo":
-                            text1 = "辞書形"
-                        elif kara == "masu":
-                            text1 = "ます形"
-                        elif kara == "te":
-                            text1 = "て形"
-                        elif kara == "ta":
-                            text1 = "た形"
-                        elif kara == "nai":
-                            text1 = "ない形"
-
-                        elif kara == "kanou":
-                            text1 = "可能形"
-                        elif kara == "tiugin":
-                            text1 = "条件形"
-                        elif kara == "mingling":
-                            text1 = "命令形"
-                        elif kara == "jiheung":
-                            text1 = "意向形"
-                        elif kara == "gamji":
-                            text1 = "禁止形"
-
-                        elif kara == "sausan":
-                            text1 = "受身形"
-                        elif kara == "siyik":
-                            text1 = "使役形"
-                        elif kara == "siyiksausan":
-                            text1 = "使役受身形"
-
-                        text2 = ""
-                        if made == "jisyo":
-                            text2 = "辞書形"
-                        elif made == "masu":
-                            text2 = "ます形"
-                        elif made == "te":
-                            text2 = "て形"
-                        elif made == "ta":
-                            text2 = "た形"
-                        elif made == "nai":
-                            text2 = "ない形"
-
-                        elif made == "kanou":
-                            text2 = "可能形"
-                        elif made == "tiugin":
-                            text2 = "条件形"
-                        elif made == "mingling":
-                            text2 = "命令形"
-                        elif made == "jiheung":
-                            text2 = "意向形"
-                        elif made == "gamji":
-                            text2 = "禁止形"
-
-                        elif made == "sausan":
-                            text2 = "受身形"
-                        elif made == "siyik":
-                            text2 = "使役形"
-                        elif made == "siyiksausan":
-                            text2 = "使役受身形"
-
-                        text(screen, text1 + "から、" + text2 + "まで", (0, 0, 0), 48, (128, 64))
-
-                        if score - prevScore == 1:
-                            pygame.draw.circle(screen, (255, 50, 50), (WIDTH - 128, HEIGHT/2), 48)
-                            pygame.draw.circle(screen, (135, 206, 235), (WIDTH - 128, HEIGHT/2), 32)
-                        else:
-                            pygame.draw.line(screen, (255, 50, 50), [WIDTH - 128-48, HEIGHT/2-48], [WIDTH - 128+48, HEIGHT/2+48], 16)
-                            pygame.draw.line(screen, (255, 50, 50), [WIDTH - 128+48, HEIGHT/2-48], [WIDTH - 128-48, HEIGHT/2+48], 16)
-
-                        if score - prevScore != 1:
-                            no_of_heart -= 1
-
-                        #heart
-                        for i in range(no_of_heart):
-                            screen.blit(heart, (128 + 32 * i, 120))
-
-                        pygame.display.update()
-                        # pygame.time.wait(1000)
-
-                        
-                        inputArr = ""
-                        outputArr = ""
-                            
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    pos = pygame.mouse.get_pos()
-                    # all button action will be set up here
-                    if click_check(pos, [64-12, 64, 64, 30]):
-                        game_state = "menu"
-
-            # game bg color
-            screen.fill((135, 206, 235))
-
-            # the game will stop for 1 second after user answered a question, for let them view whether that question is correct or wrong
-            if(pygame.time.get_ticks()-temptime>= 1000):
-                pause = False
-            else:
-                # draw the correct symbol: O; and wrong symbol: X
-                if score - prevScore == 1:
-                    pygame.draw.circle(screen, (255, 50, 50), (WIDTH - 128, HEIGHT/2), 48)
-                    pygame.draw.circle(screen, (135, 206, 235), (WIDTH - 128, HEIGHT/2), 32)
-                else:
-                    pygame.draw.line(screen, (255, 50, 50), [WIDTH - 128-48, HEIGHT/2-48], [WIDTH - 128+48, HEIGHT/2+48], 16)
-                    pygame.draw.line(screen, (255, 50, 50), [WIDTH - 128+48, HEIGHT/2-48], [WIDTH - 128-48, HEIGHT/2+48], 16)
-
-            # draw heart, here use screen blit to paste a pygame.Surface to screen. transparent png image must use this.
-            for i in range(no_of_heart):
-                screen.blit(heart, (128 + 32 * i, 120))
-
-            # back button
-            text_input_box = pygame.draw.rect(screen, (20, 20, 20), [64-12, 64, 64, 30])
-            text_input_box = pygame.draw.rect(screen, (140, 235, 52), [66-12, 66, 64-4, 30-4])
-            text(screen, "戻る", (0, 0, 0), 16, (64+64/2-12, 64+32/2), "center")
-
-            # input box (english)
-            text_input_box = pygame.draw.rect(screen, (200, 200, 200), [200, 250, 400, 64])
-            text_input_box = pygame.draw.rect(screen, (20, 20, 20), [202, 252, 396, 60])
-            text(screen, inputArr, (255, 255, 255), 24, (206, 256))
-
-            # input box (japanese)
-            text_input_box = pygame.draw.rect(screen, (200, 200, 200), [200, 250 + 96, 400, 64])
-            text_input_box = pygame.draw.rect(screen, (20, 20, 20), [202, 252 + 96, 396, 60])
-            text(screen, outputArr, (255, 255, 255), 24, (206, 256 + 96))
-            
-            # generate new qs
-            if inputing == False and qs_answered < no_of_qs and pause == False:
-                not_chosen_list = []
-                for i in range(len(choose_list)):
-                    if choose_list[i] == 0:
-                        not_chosen_list.append(i)
-                choise = random.choice(not_chosen_list)
-                choose_list[choise] = 1
-                inputing = True
-
-            # let variable verb be the answer            
-            if kara == "jisyo":
-                verb = verb_ru[choise]
-            elif kara == "masu":
-                verb = verb_masu[choise]
-            elif kara == "te":
-                verb = verb_te[choise]
-            elif kara == "ta":
-                verb = verb_ta[choise]
-            elif kara == "nai":
-                verb = verb_nai[choise]
-
-            elif kara == "kanou":
-                verb = verb_kanou[choise]
-            elif kara == "tiugin":
-                verb = verb_ba[choise]
-            elif kara == "mingling":
-                verb = verb_ro[choise]
-            elif kara == "jiheung":
-                verb = verb_ikou[choise]
-            elif kara == "gamji":
-                verb = verb_na[choise]
-
-            elif kara == "sausan":
-                verb = verb_rareru[choise]
-            elif kara == "siyik":
-                verb = verb_saseru[choise]
-            elif kara == "siyiksausan":
-                verb = verb_saseru_rareru[choise]
-
-            # draw the question text on screen
-            if(pause):
-                text(screen, str(qs_answered) + ") " + verb, (0, 0, 0), 24, (206, 186))
-            else:
-                text(screen, str(qs_answered+1) + ") " + verb, (0, 0, 0), 24, (206, 186))
-
-            # score text
-            text(screen, "スコア: " + str(score), (0, 0, 0), 24, (550, 120))
-
-
-            # players' goal is to convert verb in <text1> form into <text2> form, and this is just converting romaji into kanji
-            text1 = ""
-            if kara == "jisyo":
-                text1 = "辞書形"
-            elif kara == "masu":
-                text1 = "ます形"
-            elif kara == "te":
-                text1 = "て形"
-            elif kara == "ta":
-                text1 = "た形"
-            elif kara == "nai":
-                text1 = "ない形"
-
-            elif kara == "kanou":
-                text1 = "可能形"
-            elif kara == "tiugin":
-                text1 = "条件形"
-            elif kara == "mingling":
-                text1 = "命令形"
-            elif kara == "jiheung":
-                text1 = "意向形"
-            elif kara == "gamji":
-                text1 = "禁止形"
-
-            elif kara == "sausan":
-                text1 = "受身形"
-            elif kara == "siyik":
-                text1 = "使役形"
-            elif kara == "siyiksausan":
-                text1 = "使役受身形"
-
-            text2 = ""
-            if made == "jisyo":
-                text2 = "辞書形"
-            elif made == "masu":
-                text2 = "ます形"
-            elif made == "te":
-                text2 = "て形"
-            elif made == "ta":
-                text2 = "た形"
-            elif made == "nai":
-                text2 = "ない形"
-
-            elif made == "kanou":
-                text2 = "可能形"
-            elif made == "tiugin":
-                text2 = "条件形"
-            elif made == "mingling":
-                text2 = "命令形"
-            elif made == "jiheung":
-                text2 = "意向形"
-            elif made == "gamji":
-                text2 = "禁止形"
-
-            elif made == "sausan":
-                text2 = "受身形"
-            elif made == "siyik":
-                text2 = "使役形"
-            elif made == "siyiksausan":
-                text2 = "使役受身形"
-
-            # show text on screen: from <text1>, to <text2>
-            text(screen, text1 + "から、" + text2 + "まで", (0, 0, 0), 48, (128, 64))
-
-            # change game state after win or lose
-            if no_of_heart <= 0 and pause == False:
-                game_state = "lost"
-            elif qs_answered >= no_of_qs and pause == False:
-                game_state = "showScore"
 
     # stage select
     if game_state == "select_stage":

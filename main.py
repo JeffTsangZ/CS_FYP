@@ -5,10 +5,10 @@ from copy import deepcopy
 pygame.init()
 pygame.font.init()
 
-new_game = True
+new_game = False
 
 save = {
-    'unlock': [True, False, False, False],
+    'unlock': [True, True, False, False],
     'star': [0, 0, 0, 0],
     'current_stage': 0,
 }
@@ -584,33 +584,48 @@ def draw_stage_selection(n):
             next = 18
         prev = None
     elif n == 1:
+        # later stage can just copy from this
+
+        # bg image
         bg = 10
+
+        # image at center, if havent unlock then will show the gray version
         if save["unlock"][n]:
             center = 17
         else:
             center = 18
+
+        # the title text, but in image format, Jeff can help gen
         title = 21
+
+        #image of next stage
         if n+1 < len(save["unlock"]):
             if save["unlock"][n+1]:
-                next = 19
-            else:
                 next = 20
+            else:
+                next = 19
         else:
             next = None
-        prev = 17
+
+        # image of previos stage
+        if save["unlock"][n-1]:
+            prev = 17
+        else:
+            prev = 18
+
     elif n == 2:
         bg = 10
         # Center stage (Stage 3) is Type 1
         if save["unlock"][n]:
-            center = 19 # Type 1 light
+            center = 20
         else:
-            center = 20 # Type 1 dark
-        title = 21 # new add image
+            center = 19
+        title = 21
         if n+1 < len(save["unlock"]):
             if save["unlock"][n+1]:
-                next = 19
-            else:
                 next = 20
+            else:
+                next = 19
         else:
             next = None
         if save["unlock"][n-1]:
@@ -619,23 +634,22 @@ def draw_stage_selection(n):
             prev = 18
     elif n == 3:
         bg = 10
-        # Center stage (Stage 3) is Type 1
         if save["unlock"][n]:
-            center = 19 # Type 1 light
+            center = 20
         else:
-            center = 20 # Type 1 dark
-        title = 21 # new add image
+            center = 19
+        title = 21
         if n+1 < len(save["unlock"]):
             if save["unlock"][n+1]:
-                next = 19
-            else:
                 next = 20
+            else:
+                next = 19
         else:
             next = None
         if save["unlock"][n-1]:
-            prev = 19
-        else:
             prev = 20
+        else:
+            prev = 19
 
     screen.blit(images[bg], transform_scale([0, -60]))
     screen.blit(images[center], transform_scale([297, 198]))
@@ -662,7 +676,7 @@ load()
 
 if new_game:
     save = {
-        'unlock': [True, False, False, False],
+        'unlock': [True, True, False, False],
         'star': [0, 0, 0, 0],
         'current_stage': 0,
     }
@@ -713,7 +727,7 @@ verb = {
 
 }
 # basic initialize of variables for the game loop
-game_state = "story"          # this determine initial gamestate
+game_state = "menu"          # this determine initial gamestate
 running = True
 
 inputArr = ""
@@ -841,7 +855,7 @@ dialog = [
 
 ]
 # 0: both gray; 1: left talking; 2: right talking; 3: both talking
-story_num = 3
+story_num = 0
 stage = 0
 dialog_num = 0
 

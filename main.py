@@ -5,11 +5,11 @@ from copy import deepcopy
 pygame.init()
 pygame.font.init()
 
-new_game = False
+new_game = True
 
 save = {
-    'unlock': [True, False, False],
-    'star': [0, 0, 0],
+    'unlock': [True, False, False, False],
+    'star': [0, 0, 0, 0],
     'current_stage': 0,
 }
 
@@ -583,7 +583,7 @@ def draw_stage_selection(n):
         else:
             next = 18
         prev = None
-    if n == 1:
+    elif n == 1:
         bg = 10
         if save["unlock"][n]:
             center = 17
@@ -598,16 +598,44 @@ def draw_stage_selection(n):
         else:
             next = None
         prev = 17
-    if n == 2:
+    elif n == 2:
         bg = 10
         # Center stage (Stage 3) is Type 1
         if save["unlock"][n]:
-            center = 17 # Type 1 light
+            center = 19 # Type 1 light
         else:
-            center = 18 # Type 1 dark
+            center = 20 # Type 1 dark
         title = 21 # new add image
-        next = None
-        prev = 19
+        if n+1 < len(save["unlock"]):
+            if save["unlock"][n+1]:
+                next = 19
+            else:
+                next = 20
+        else:
+            next = None
+        if save["unlock"][n-1]:
+            prev = 17
+        else:
+            prev = 18
+    elif n == 3:
+        bg = 10
+        # Center stage (Stage 3) is Type 1
+        if save["unlock"][n]:
+            center = 19 # Type 1 light
+        else:
+            center = 20 # Type 1 dark
+        title = 21 # new add image
+        if n+1 < len(save["unlock"]):
+            if save["unlock"][n+1]:
+                next = 19
+            else:
+                next = 20
+        else:
+            next = None
+        if save["unlock"][n-1]:
+            prev = 19
+        else:
+            prev = 20
 
     screen.blit(images[bg], transform_scale([0, -60]))
     screen.blit(images[center], transform_scale([297, 198]))
@@ -634,8 +662,8 @@ load()
 
 if new_game:
     save = {
-        'unlock': [True, False, False],
-        'star': [0, 0, 0],
+        'unlock': [True, False, False, False],
+        'star': [0, 0, 0, 0],
         'current_stage': 0,
     }
 # question bank: verb form convertion
@@ -685,11 +713,11 @@ verb = {
 
 }
 # basic initialize of variables for the game loop
-game_state = "menu"          # this determine initial gamestate
+game_state = "story"          # this determine initial gamestate
 running = True
 
-# inputArr = ""
-# outputArr = ""
+inputArr = ""
+outputArr = ""
 # no_of_qs = 3
 # no_of_heart = 3
 # heart = pygame.image.load("media/heart.png").convert_alpha()
@@ -806,12 +834,18 @@ dialog = [
         (1, '赤真：\n喔喔！'),
         (2, '莉子：\n看看這個句子，然後把正確的詞語拖到空格裡吧！'),
         (1, '赤真：\n好的，我試試看！')
+    ],
+    [
+        (1, '赤真：\n好的，我試試看！')
     ]
 
 ]
 # 0: both gray; 1: left talking; 2: right talking; 3: both talking
-story_num = 0
+story_num = 3
+stage = 0
 dialog_num = 0
+
+#this part is for drag type
 draggable_rects = []
 draggable_rects_initial_pos = []
 dragged_item_index = -1
@@ -819,7 +853,9 @@ is_dragging = False
 drag_offset_x = 0
 drag_offset_y = 0
 drop_target_rect = pygame.Rect(0,0,0,0) # Initialize with a dummy rect
-parts =[]
+parts = []
+
+
 # question type: MC, Drag, input
 battle_detail = [
     # 0
@@ -864,7 +900,7 @@ battle_detail = [
     #2
     {
         "question_type": "Drag",
-         "questions": [
+        "questions": [
             { "sentence": "私＿学生です。", "answer": "は", "options": ["は", "も", "で", "に"] },
             { "sentence": "これ＿本です。", "answer": "は", "options": ["は", "を", "が", "へ"] },
             { "sentence": "猫＿います。", "answer": "が", "options": ["が", "は", "も", "と"] },
@@ -876,12 +912,28 @@ battle_detail = [
         "enemy_attack_word": "が",
         "target": [6, 8],
         "enemy_hp": 250,
+    },
+    #3 (masu to ru)
+    {
+        "question_type": "input",
+        "question": "verb_masu",
+        "answer": "verb_ru",
+        "enemy_surf": pygame.transform.flip(images[9], flip_x=True, flip_y=False),
+        "counter": 0,
+        "enemy_attack_word": "が",
+        "target": [6, 8],
+        "enemy_hp": 250,
+        "curr_qs": None
+
     }
+    
+
 ]
+
+battle_detail_backup = deepcopy(battle_detail)
 
 player_hp = 100
 enemy_hp = 100
-stage = 0
 question_num = 0
     
 
@@ -931,13 +983,14 @@ while running:
                 time=0
             else:
                 game_state = "story"
-            story_num = 0
-            dialog_num = 0
-            time = 0
+                story_num = 0
+                dialog_num = 0
+                time = 0
                     
     if game_state == "story":
         # end story
         if dialog_num == len(dialog[story_num]):
+            battle_detail = deepcopy(battle_detail_backup)
             time = 0
 
             # inputing = False
@@ -950,21 +1003,20 @@ while running:
 
             game_state = "playing"
             
-            battle_detail[stage]["order"] = []
+            
             stage = story_num
             player_hp = 100
             enemy_hp = battle_detail[stage]["enemy_hp"]
 
-            #battle_detail[stage]["order"].append(random.randint(0, len(battle_detail[stage]["question"])-1))
-
             if battle_detail[stage]["question_type"] == "MC":
-                battle_detail[stage]["order"] = []
-                # Get the first random question for the MC battle
-                first_q_index = random.randint(0, len(battle_detail[stage]["question"])-1)
-                battle_detail[stage]["order"].append(first_q_index)
-                
-                # **SOLUTION**: The shuffle line is now safely inside the MC block
-                random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][first_q_index]][1])
+                battle_detail[stage]["order"] = [random.randint(0, len(battle_detail[stage]["question"])-1)]
+                if stage == 0:
+                    action = "attack"
+                else:
+                    action = None
+                question_num = 0
+                correct = None
+                random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
 
             elif battle_detail[stage]["question_type"] == "Drag":
                 # For Drag type, create a shuffled list of all question indices
@@ -975,14 +1027,16 @@ while running:
                 draggable_rects_initial_pos.clear()
                 is_dragging = False
                 dragged_item_index = -1
-
-            if stage == 0:
-                action = "attack"
-            else:
                 action = None
-            question_num = 0
-            correct = None
+                question_num = 0
+                correct = None
+
+            elif battle_detail[stage]["question_type"] == "input":
+                action = None
+                battle_detail[stage]["curr_qs"] = random.randint(0, len(verb[battle_detail[stage]["question"]])-1)
+                correct = None
         else:
+            
             # BG image
             screen.blit(images[3], (0, 0))
 
@@ -1013,14 +1067,16 @@ while running:
                     text_sp(screen, "あ", (120, 0, 0), 200, [WIDTH/2, HEIGHT/2], int((fps*2-time)/(fps*2)*255), "center")
                 elif(time >= fps*2):
                     time = 0
-            if (dialog[story_num][dialog_num][0] == 2.1):
+            elif (dialog[story_num][dialog_num][0] == 2.1):
                 if(time > 0 and time < fps*2):
                     time += 1
                     text_sp(screen, "か", (120, 255, 120), 200, transform_scale([220, 520]), int((fps*2-time)/(fps*2)*255), "center")
                 elif(time >= fps*2):
                     time = 0
-                
+            elif time != 0:
+                time = 0
 
+            
             for event in pygame.event.get():
                 # allow close game
                 if event.type == pygame.QUIT:
@@ -1037,37 +1093,31 @@ while running:
                                     time = 1
 
     if game_state == "playing":
+        if battle_detail[stage]["question_type"] == "MC":
+            # BG image
+            screen.blit(images[3], (0, 0))
 
-        # BG image
-        screen.blit(images[3], (0, 0))
-
-        # right character
-        screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), transform_scale([959, 263]))
-        pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([1130, 0, 310, 80]))
-        text(screen, "HP", (0, 0, 0), 24, transform_scale([1158, 22]))
-        pygame.draw.rect(screen, (0, 0, 0), transform_scale([1209, 34, 204, 13]))
-        pygame.draw.rect(screen, (255, 0, 0), transform_scale([1209, 34, player_hp/100*204, 13]))
+            # right character
+            screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), transform_scale([959, 263]))
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([1130, 0, 310, 80]))
+            text(screen, "HP", (0, 0, 0), 24, transform_scale([1158, 22]))
+            pygame.draw.rect(screen, (0, 0, 0), transform_scale([1209, 34, 204, 13]))
+            pygame.draw.rect(screen, (255, 0, 0), transform_scale([1209, 34, player_hp/100*204, 13]))
             
 
-        # left enemy
-        screen.blit(battle_detail[stage]["enemy_surf"], transform_scale([-51, 100]))
-        pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([0, 0, 310, 80]))
-        text(screen, "HP", (0, 0, 0), 24, transform_scale([28, 22]))
-        pygame.draw.rect(screen, (0, 0, 0), transform_scale([79, 34, 204, 13]))
-        pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/battle_detail[stage]["enemy_hp"]*204, 13]))
+            # left enemy
+            screen.blit(battle_detail[stage]["enemy_surf"], transform_scale([-51, 100]))
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([0, 0, 310, 80]))
+            text(screen, "HP", (0, 0, 0), 24, transform_scale([28, 22]))
+            pygame.draw.rect(screen, (0, 0, 0), transform_scale([79, 34, 204, 13]))
+            pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/battle_detail[stage]["enemy_hp"]*204, 13]))
 
-
-        if battle_detail[stage]["question_type"] == "MC":
             pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([324, 552, 791, 408]))
             if action == "attack" or action == "recover":
                 pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([407, 729, 194, 94]))
                 pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([840, 729, 194, 94]))
                 pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([407, 842, 194, 94]))
                 pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([840, 842, 194, 94]))
-
-                q_index = battle_detail[stage]["order"][question_num]
-                question_text = battle_detail[stage]["question"][q_index]
-                answers = battle_detail[stage]["answer"][question_text][1]
 
                 text(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (0, 0, 0), 64, transform_scale([688, 601]), "center")
                 
@@ -1080,8 +1130,163 @@ while running:
                 pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([840, 729, 194, 207]))
                 text(screen, "攻擊", (0, 0, 0), 64, transform_scale([504, 813]), "center")
                 text(screen, "回復", (0, 0, 0), 64, transform_scale([937, 813]), "center")
-        
+
+
+            for event in pygame.event.get():
+                # allow close game
+                if event.type == pygame.QUIT:
+                    running = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if pygame.mouse.get_pressed()[0]:
+                        pos = pygame.mouse.get_pos()
+                        if action == "attack" or action == "recover":
+                            if time == 0:
+                                if click_check(pos, transform_scale([407, 729, 194, 94])):
+                                    time = 1
+                                    if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][0] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
+                                        correct = True
+                                    else:
+                                        correct = False
+                                elif click_check(pos, transform_scale([840, 729, 194, 94])):
+                                    time = 1
+                                    if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][1] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
+                                        correct = True
+                                    else:
+                                        correct = False
+                                elif click_check(pos, transform_scale([407, 842, 194, 94])):
+                                    time = 1
+                                    if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][2] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
+                                        correct = True
+                                    else:
+                                        correct = False
+                                elif click_check(pos, transform_scale([840, 842, 194, 94])):
+                                    time = 1
+                                    if battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1][3] == battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][0]:
+                                        correct = True
+                                    else:
+                                        correct = False
+                        else:
+                            if click_check(pos, transform_scale([407, 729, 194, 207])):
+                                action = "attack"
+                            elif click_check(pos, transform_scale([840, 729, 194, 207])):
+                                action = "recover"
+
+            if correct == True:
+                if action == "attack":
+                    if(time > 0 and time < fps*1):
+                        time += 1
+                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 0, 0), 200, transform_scale([220, 330]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
+                        time = 0
+                    if time == 0:
+                        enemy_hp -= 20
+                        correct = None
+                        if stage == 0:
+                            action = "attack"
+                        else:
+                            action = None
+                        question_num += 1
+                        if enemy_hp <= 0:
+                            time = -1*fps
+                            if (len(battle_detail[stage]["order"]) <= battle_detail[stage]["target"][0]):
+                                save["star"][stage] = 3
+                            elif (len(battle_detail[stage]["order"]) <= battle_detail[stage]["target"][1]):
+                                if save["star"][stage] < 2:
+                                    save["star"][stage] = 2
+                            else:
+                                if save["star"][stage] < 1:
+                                    save["star"][stage] = 1
+                            if len(save["unlock"])>save["current_stage"]+1:
+                                save["unlock"][save["current_stage"]+1]=True
+                            write()
+                            game_state = "win"
+                        else:
+                            temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                            while temp == battle_detail[stage]["order"][-1]:
+                                temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                            battle_detail[stage]["order"].append(temp)
+                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
+                elif action == "recover":
+                    if(time > 0 and time < fps*1):
+                        time += 1
+                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
+                        time = 0
+                    if time == 0:
+                        player_hp = min(player_hp+20, 100)
+                        correct = None
+                        action = None
+                        question_num += 1
+                        temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                        while temp == battle_detail[stage]["order"][-1]:
+                            temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                        battle_detail[stage]["order"].append(temp)
+                        random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
+            elif correct == False:
+                if action == "attack":
+                    if(time > 0 and time < fps*1):
+                        time += 1
+                        text_sp(screen, battle_detail[stage]["enemy_attack_word"], (120, 0, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
+                        time = 0
+                    if time == 0:
+                        player_hp -= 40
+                        correct = None
+                        if stage == 0:
+                            action = "attack"
+                        else:
+                            action = None
+                        question_num += 1
+                        if player_hp <= 0:
+                            time = -1*fps
+                            game_state = "lose"
+                        else:
+                            temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                            while temp == battle_detail[stage]["order"][-1]:
+                                temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                            battle_detail[stage]["order"].append(temp)
+                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
+                elif action == "recover":
+                    if(time > 0 and time < fps*1):
+                        time += 1
+                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                        text_sp(screen, "╳", (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
+                        time = 0
+                    if time == 0:
+                        player_hp -= 10
+                        correct = None
+                        action = None
+                        question_num += 1
+                        if player_hp <= 0:
+                            time = -1*fps
+                            game_state = "lose"
+                        else:
+                            temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                            while temp == battle_detail[stage]["order"][-1]:
+                                temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                            battle_detail[stage]["order"].append(temp)
+                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]][1])
+
         elif battle_detail[stage]["question_type"] == "Drag":
+            # BG image
+            screen.blit(images[3], (0, 0))
+
+            # right character
+            screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), transform_scale([959, 263]))
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([1130, 0, 310, 80]))
+            text(screen, "HP", (0, 0, 0), 24, transform_scale([1158, 22]))
+            pygame.draw.rect(screen, (0, 0, 0), transform_scale([1209, 34, 204, 13]))
+            pygame.draw.rect(screen, (255, 0, 0), transform_scale([1209, 34, player_hp/100*204, 13]))
+                
+
+            # left enemy
+            screen.blit(battle_detail[stage]["enemy_surf"], transform_scale([-51, 100]))
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([0, 0, 310, 80]))
+            text(screen, "HP", (0, 0, 0), 24, transform_scale([28, 22]))
+            pygame.draw.rect(screen, (0, 0, 0), transform_scale([79, 34, 204, 13]))
+            pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/battle_detail[stage]["enemy_hp"]*204, 13]))
+
             q_index = battle_detail[stage]["order"][question_num]
             current_q = battle_detail[stage]["questions"][q_index]
             
@@ -1134,167 +1339,360 @@ while running:
                 pygame.draw.rect(screen, pygame.Color("#aaddff"), rect, border_radius=10)
                 text(screen, current_q["options"][dragged_item_index], (0,0,0), 50, rect.center, "center")
 
-        # --- 3. Unified Event Loop ---
-        # A single event loop handles input for all question types.
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-            # --- MC-Specific Event Handling ---
-            if battle_detail[stage]["question_type"] == "MC":
-                if event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[0]:
-                    pos = pygame.mouse.get_pos()
-                    if (action == "attack" or action == "recover") and time == 0:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                if time == 0:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not is_dragging:
+                        for i, rect in enumerate(draggable_rects):
+                            if rect.collidepoint(event.pos):
+                                is_dragging = True
+                                dragged_item_index = i
+                                drag_offset_x = event.pos[0] - rect.x
+                                drag_offset_y = event.pos[1] - rect.y
+                                break
+                    elif event.type == pygame.MOUSEMOTION and is_dragging:
+                        if dragged_item_index != -1:
+                            draggable_rects[dragged_item_index].x = event.pos[0] - drag_offset_x
+                            draggable_rects[dragged_item_index].y = event.pos[1] - drag_offset_y
+                    elif event.type == pygame.MOUSEBUTTONUP and event.button == 1 and is_dragging:
                         q_index = battle_detail[stage]["order"][question_num]
-                        question_text = battle_detail[stage]["question"][q_index]
-                        correct_answer = battle_detail[stage]["answer"][question_text][0]
-                        answers = battle_detail[stage]["answer"][question_text][1]
+                        current_q = battle_detail[stage]["questions"][q_index]
                         
-                        if click_check(pos, transform_scale([407, 729, 194, 94])):
-                            time = 1
-                            correct = (answers[0] == correct_answer)
-                        elif click_check(pos, transform_scale([840, 729, 194, 94])):
-                            time = 1
-                            correct = (answers[1] == correct_answer)
-                        elif click_check(pos, transform_scale([407, 842, 194, 94])):
-                            time = 1
-                            correct = (answers[2] == correct_answer)
-                        elif click_check(pos, transform_scale([840, 842, 194, 94])):
-                            time = 1
-                            correct = (answers[3] == correct_answer)
-                    else:
-                        if click_check(pos, transform_scale([407, 729, 194, 207])):
-                            action = "attack"
-                        elif click_check(pos, transform_scale([840, 729, 194, 207])):
-                            action = "recover"
-            
-            # --- Drag-and-Drop-Specific Event Handling ---
-            elif battle_detail[stage]["question_type"] == "Drag" and time == 0:
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not is_dragging:
-                    for i, rect in enumerate(draggable_rects):
-                        if rect.collidepoint(event.pos):
-                            is_dragging = True
-                            dragged_item_index = i
-                            drag_offset_x = event.pos[0] - rect.x
-                            drag_offset_y = event.pos[1] - rect.y
-                            break
-                elif event.type == pygame.MOUSEMOTION and is_dragging:
-                    if dragged_item_index != -1:
-                        draggable_rects[dragged_item_index].x = event.pos[0] - drag_offset_x
-                        draggable_rects[dragged_item_index].y = event.pos[1] - drag_offset_y
-                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1 and is_dragging:
-                    q_index = battle_detail[stage]["order"][question_num]
-                    current_q = battle_detail[stage]["questions"][q_index]
-                    
-                    if drop_target_rect.colliderect(draggable_rects[dragged_item_index]):
-                        selected_option = current_q["options"][dragged_item_index]
-                        correct = (selected_option == current_q["answer"])
-                        time = 1 # Trigger post-answer animation and logic
-                    else: # If not on target, snap back to original position
-                        draggable_rects[dragged_item_index] = draggable_rects_initial_pos[dragged_item_index].copy()
-                    
-                    is_dragging = False
-                    dragged_item_index = -1
+                        if drop_target_rect.colliderect(draggable_rects[dragged_item_index]):
+                            selected_option = current_q["options"][dragged_item_index]
+                            correct = (selected_option == current_q["answer"])
+                            time = 1 # Trigger post-answer animation and logic
+                        else: # If not on target, snap back to original position
+                            draggable_rects[dragged_item_index] = draggable_rects_initial_pos[dragged_item_index].copy()
+                        
+                        is_dragging = False
+                        dragged_item_index = -1
 
-        # --- START OF POST-ANSWER LOGIC ---
-        # This entire block runs only when the 'correct' variable has been set (i.e., an answer was just submitted).
-        if correct is not None:
-            if correct: # Correct Answer Logic
-                # For Drag and Drop, the action is always "attack". For MC, it uses the selected action.
-                action_type = "attack" if battle_detail[stage]["question_type"] == "Drag" else action
-                
-                if action_type == "attack":
-                    # Animate the attack
-                    if(time > 0 and time < fps*1):
-                        time += 1
-                        # Get the correct text to display for the animation based on question type
-                        q_text = ""
-                        if battle_detail[stage]["question_type"] == "Drag":
-                           q_text = battle_detail[stage]["questions"][battle_detail[stage]["order"][question_num]]["answer"]
-                        else: # MC
-                           q_text = battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]
-                        text_sp(screen, q_text, (120, 0, 0), 200, transform_scale([220, 330]), int((fps*1-time)/(fps*1)*255), "center")
-                    elif(time >= fps*1): time = 0
+            # --- START OF POST-ANSWER LOGIC ---
+            # This entire block runs only when the 'correct' variable has been set (i.e., an answer was just submitted).
+            if correct is not None:
+                if correct: # Correct Answer Logic
+                    # For Drag and Drop, the action is always "attack". For MC, it uses the selected action.
+                    action_type = "attack" if battle_detail[stage]["question_type"] == "Drag" else action
                     
-                    # When animation finishes, apply damage
+                    if action_type == "attack":
+                        # Animate the attack
+                        if(time > 0 and time < fps*1):
+                            time += 1
+                            # Get the correct text to display for the animation based on question type
+                            q_text = ""
+                            if battle_detail[stage]["question_type"] == "Drag":
+                                q_text = battle_detail[stage]["questions"][battle_detail[stage]["order"][question_num]]["answer"]
+                            else: # MC
+                                q_text = battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]]
+                            text_sp(screen, q_text, (120, 0, 0), 200, transform_scale([220, 330]), int((fps*1-time)/(fps*1)*255), "center")
+                        elif(time >= fps*1): time = 0
+                        
+                        # When animation finishes, apply damage
+                        if time == 0:
+                            enemy_hp -= 40
+                    
+                    elif action_type == "recover":
+                        # Animate the recovery
+                        if(time > 0 and time < fps*1):
+                            time += 1
+                            text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                        elif(time >= fps*1): time = 0
+                        
+                        # When animation finishes, restore HP
+                        if time == 0:
+                            player_hp = min(player_hp+20, 100)
+                    
+                    # After any correct action's animation is done
                     if time == 0:
-                        enemy_hp -= 40
-                
-                elif action_type == "recover":
-                    # Animate the recovery
+                        correct = None # Reset for the next turn
+                        question_num += 1
+                        if stage == 0: action = "attack" # Reset action for stage 0
+                        else: action = None
+                        
+                        # Check for enemy defeat (win condition)
+                        if enemy_hp <= 0:
+                            time = -1*fps # Start win screen countdown
+                            # Award stars based on performance (number of questions answered)
+                            if (question_num <= battle_detail[stage]["target"][0]): save["star"][stage] = 3
+                            elif (question_num <= battle_detail[stage]["target"][1]): save["star"][stage] = max(save["star"][stage], 2)
+                            else: save["star"][stage] = max(save["star"][stage], 1)
+                            # Unlock the next stage
+                            if save["current_stage"] + 1 < len(save["unlock"]):
+                                save["unlock"][save["current_stage"]+1]=True
+                            write()
+                            game_state = "win"
+                        else: 
+                            # Prepare the next question
+                            if battle_detail[stage]["question_type"] == "MC":
+                                temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                                battle_detail[stage]["order"].append(temp)
+                                random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][temp]][1])
+                            elif battle_detail[stage]["question_type"] == "Drag":
+                                draggable_rects.clear() # Reset UI elements
+                                draggable_rects_initial_pos.clear()
+                                # If all questions in the list are done, shuffle and start over
+                                if question_num >= len(battle_detail[stage]["order"]):
+                                    random.shuffle(battle_detail[stage]["order"])
+                                    question_num = 0
+
+                elif not correct: # Incorrect Answer Logic
+                    # Animate the enemy's attack
                     if(time > 0 and time < fps*1):
                         time += 1
-                        text_sp(screen, battle_detail[stage]["question"][battle_detail[stage]["order"][question_num]], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                        text_sp(screen, battle_detail[stage]["enemy_attack_word"], (120, 0, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
                     elif(time >= fps*1): time = 0
                     
-                    # When animation finishes, restore HP
+                    # When animation finishes, apply damage to the player
+                    if time == 0:
+                        player_hp -= 25
+                        correct = None # Reset for the next turn
+                        question_num += 1
+                        if stage == 0: action = "attack"
+                        else: action = None
+                        
+                        # Check for player defeat (lose condition)
+                        if player_hp <= 0:
+                            time = -1*fps # Start lose screen countdown
+                            game_state = "lose"
+                        else: 
+                            # Prepare the next question
+                            if battle_detail[stage]["question_type"] == "MC":
+                                temp = random.randint(0, len(battle_detail[stage]["question"])-1)
+                                battle_detail[stage]["order"].append(temp)
+                                random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][temp]][1])
+                            elif battle_detail[stage]["question_type"] == "Drag":
+                                draggable_rects.clear()
+                                draggable_rects_initial_pos.clear()
+                                if question_num >= len(battle_detail[stage]["order"]):
+                                    random.shuffle(battle_detail[stage]["order"])
+                                    question_num = 0
+
+        elif battle_detail[stage]["question_type"] == "input":
+            # BG image
+            screen.blit(images[3], (0, 0))
+
+            # right character
+            screen.blit(pygame.transform.flip(images[4], flip_x=True, flip_y=False), transform_scale([959, 263]))
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([1130, 0, 310, 80]))
+            text(screen, "HP", (0, 0, 0), 24, transform_scale([1158, 22]))
+            pygame.draw.rect(screen, (0, 0, 0), transform_scale([1209, 34, 204, 13]))
+            pygame.draw.rect(screen, (255, 0, 0), transform_scale([1209, 34, player_hp/100*204, 13]))
+                
+
+            # left enemy
+            screen.blit(battle_detail[stage]["enemy_surf"], transform_scale([-51, 100]))
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([0, 0, 310, 80]))
+            text(screen, "HP", (0, 0, 0), 24, transform_scale([28, 22]))
+            pygame.draw.rect(screen, (0, 0, 0), transform_scale([79, 34, 204, 13]))
+            pygame.draw.rect(screen, (255, 0, 0), transform_scale([79, 34, enemy_hp/battle_detail[stage]["enemy_hp"]*204, 13]))
+
+            pygame.draw.rect(screen, pygame.Color("#d9d9d9"), transform_scale([324, 702, 791, 258]))
+            
+
+            if action == "attack" or action == "recover":
+                # quesrion
+                text(screen, verb[battle_detail[stage]["question"]][battle_detail[stage]["curr_qs"]], (0, 0, 0), transform_scale([64])[0], transform_scale([720, 751]), "center")
+
+                # display input as hiragana
+                pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([400, 780, 640, 64]))
+                text(screen, outputArr, (0, 0, 0), transform_scale([64])[0], transform_scale([720, 805]), "center")
+                # display input as romaji
+                pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([400, 865, 640, 64]))
+                text(screen, inputArr, (0, 0, 0), transform_scale([64])[0], transform_scale([720, 900]), "center")
+            else:
+                pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([407, 729, 194, 207]))
+                pygame.draw.rect(screen, pygame.Color("#ececec"), transform_scale([840, 729, 194, 207]))
+                text(screen, "攻擊", (0, 0, 0), 64, transform_scale([504, 813]), "center")
+                text(screen, "回復", (0, 0, 0), 64, transform_scale([937, 813]), "center")
+            
+            
+            for event in pygame.event.get():
+                # allow close game
+                if event.type == pygame.QUIT:
+                    running = False
+                # set up in-game keyboard input
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if pygame.mouse.get_pressed()[0]:
+                        pos = pygame.mouse.get_pos()
+                        if action == None:
+                            if click_check(pos, transform_scale([407, 729, 194, 207])):
+                                action = "attack"
+                            elif click_check(pos, transform_scale([840, 729, 194, 207])):
+                                action = "recover"
+                if event.type == pygame.KEYDOWN and time == 0:
+                    if action == "attack" or action == "recover":
+                        if event.type == pygame.KEYDOWN and time == 0:
+                            print(verb[battle_detail[stage]["answer"]+"_hira"][battle_detail[stage]["curr_qs"]])
+                            if event.key != pygame.K_RETURN and event.key != pygame.K_KP_ENTER:
+                                if event.key == pygame.K_a:
+                                    inputArr = inputArr + 'a'
+                                if event.key == pygame.K_b:
+                                    inputArr = inputArr + 'b'
+                                if event.key == pygame.K_c:
+                                    inputArr = inputArr + 'c'
+                                if event.key == pygame.K_d:
+                                    inputArr = inputArr + 'd'
+                                if event.key == pygame.K_e:
+                                    inputArr = inputArr + 'e'
+                                if event.key == pygame.K_f:
+                                    inputArr = inputArr + 'f'
+                                if event.key == pygame.K_g:
+                                    inputArr = inputArr + 'g'
+                                if event.key == pygame.K_h:
+                                    inputArr = inputArr + 'h'
+                                if event.key == pygame.K_i:
+                                    inputArr = inputArr + 'i'
+                                if event.key == pygame.K_j:
+                                    inputArr = inputArr + 'j'
+                                if event.key == pygame.K_k:
+                                    inputArr = inputArr + 'k'
+                                if event.key == pygame.K_l:
+                                    inputArr = inputArr + 'l'
+                                if event.key == pygame.K_m:
+                                    inputArr = inputArr + 'm'
+                                if event.key == pygame.K_n:
+                                    inputArr = inputArr + 'n'
+                                if event.key == pygame.K_o:
+                                    inputArr = inputArr + 'o'
+                                if event.key == pygame.K_p:
+                                    inputArr = inputArr + 'p'
+                                if event.key == pygame.K_q:
+                                    inputArr = inputArr + 'q'
+                                if event.key == pygame.K_r:
+                                    inputArr = inputArr + 'r'
+                                if event.key == pygame.K_s:
+                                    inputArr = inputArr + 's'
+                                if event.key == pygame.K_t:
+                                    inputArr = inputArr + 't'
+                                if event.key == pygame.K_u:
+                                    inputArr = inputArr + 'u'
+                                if event.key == pygame.K_v:
+                                    inputArr = inputArr + 'v'
+                                if event.key == pygame.K_w:
+                                    inputArr = inputArr + 'w'
+                                if event.key == pygame.K_x:
+                                    inputArr = inputArr + 'x'
+                                if event.key == pygame.K_y:
+                                    inputArr = inputArr + 'y'
+                                if event.key == pygame.K_z:
+                                    inputArr = inputArr + 'z'
+                                if event.key == pygame.K_BACKSPACE:
+                                    inputArr = inputArr[:-1]
+                                outputArr = textinput(inputArr)
+                            else:
+                                # event after pressing Enter key
+                                time = 1
+                                battle_detail[stage]["counter"] += 1
+                                if verb[battle_detail[stage]["answer"]+"_hira"][battle_detail[stage]["curr_qs"]] == outputArr:
+                                    correct = True
+                                else:
+                                    correct = False
+
+
+                
+            
+            if correct == True:
+                if action == "attack":
+                    if(time > 0 and time < fps*1):
+                        time += 1
+                        text_sp(screen, verb[battle_detail[stage]["question"]][battle_detail[stage]["curr_qs"]][0], (120, 0, 0), 200, transform_scale([220, 330]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
+                        time = 0
+                    if time == 0:
+                        enemy_hp -= 20
+                        correct = None
+                        action = None
+                        if enemy_hp <= 0:
+                            time = -1*fps
+                            if (battle_detail[stage]["counter"] <= battle_detail[stage]["target"][0]):
+                                save["star"][stage] = 3
+                            elif (battle_detail[stage]["counter"] <= battle_detail[stage]["target"][1]):
+                                if save["star"][stage] < 2:
+                                    save["star"][stage] = 2
+                            else:
+                                if save["star"][stage] < 1:
+                                    save["star"][stage] = 1
+                            if len(save["unlock"])>save["current_stage"]+1:
+                                save["unlock"][save["current_stage"]+1]=True
+                            write()
+                            game_state = "win"
+                        else:
+                            temp = random.randint(0, len(verb[battle_detail[stage]["question"]])-1)
+                            while temp == battle_detail[stage]["curr_qs"]:
+                                temp = random.randint(0, len(verb[battle_detail[stage]["question"]])-1)
+                            battle_detail[stage]["curr_qs"] = temp
+                            inputArr = ""
+                            outputArr = ""
+                elif action == "recover":
+                    if(time > 0 and time < fps*1):
+                        time += 1
+                        text_sp(screen, verb[battle_detail[stage]["question"]][battle_detail[stage]["curr_qs"]][0], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
+                        time = 0
                     if time == 0:
                         player_hp = min(player_hp+20, 100)
-                
-                # After any correct action's animation is done
-                if time == 0:
-                    correct = None # Reset for the next turn
-                    question_num += 1
-                    if stage == 0: action = "attack" # Reset action for stage 0
-                    else: action = None
-                    
-                    # Check for enemy defeat (win condition)
-                    if enemy_hp <= 0:
-                        time = -1*fps # Start win screen countdown
-                        # Award stars based on performance (number of questions answered)
-                        if (question_num <= battle_detail[stage]["target"][0]): save["star"][stage] = 3
-                        elif (question_num <= battle_detail[stage]["target"][1]): save["star"][stage] = max(save["star"][stage], 2)
-                        else: save["star"][stage] = max(save["star"][stage], 1)
-                        # Unlock the next stage
-                        if save["current_stage"] + 1 < len(save["unlock"]):
-                            save["unlock"][save["current_stage"]+1]=True
-                        write()
-                        game_state = "win"
-                    else: 
-                        # Prepare the next question
-                        if battle_detail[stage]["question_type"] == "MC":
-                            temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                            battle_detail[stage]["order"].append(temp)
-                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][temp]][1])
-                        elif battle_detail[stage]["question_type"] == "Drag":
-                            draggable_rects.clear() # Reset UI elements
-                            draggable_rects_initial_pos.clear()
-                            # If all questions in the list are done, shuffle and start over
-                            if question_num >= len(battle_detail[stage]["order"]):
-                                random.shuffle(battle_detail[stage]["order"])
-                                question_num = 0
+                        correct = None
+                        action = None
+                        temp = random.randint(0, len(verb[battle_detail[stage]["question"]])-1)
+                        while temp == battle_detail[stage]["curr_qs"]:
+                            temp = random.randint(0, len(verb[battle_detail[stage]["question"]])-1)
+                        battle_detail[stage]["curr_qs"] = temp
+                        inputArr = ""
+                        outputArr = ""
+            elif correct == False:
+                if action == "attack":
+                    if(time > 0 and time < fps*1):
+                        time += 1
+                        text_sp(screen, battle_detail[stage]["enemy_attack_word"], (120, 0, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
+                        time = 0
+                    if time == 0:
+                        player_hp -= 40
+                        correct = None
+                        if stage == 0:
+                            action = "attack"
+                        else:
+                            action = None
+                        if player_hp <= 0:
+                            time = -1*fps
+                            game_state = "lose"
+                        else:
+                            temp = random.randint(0, len(verb[battle_detail[stage]["question"]])-1)
+                            while temp == battle_detail[stage]["curr_qs"]:
+                                temp = random.randint(0, len(verb[battle_detail[stage]["question"]])-1)
+                            battle_detail[stage]["curr_qs"] = temp
+                            inputArr = ""
+                            outputArr = ""
+                elif action == "recover":
+                    if(time > 0 and time < fps*1):
+                        time += 1
+                        text_sp(screen, verb[battle_detail[stage]["question"]][battle_detail[stage]["curr_qs"]][0], (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                        text_sp(screen, "╳", (120, 255, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
+                    elif(time >= fps*1):
+                        time = 0
+                    if time == 0:
+                        player_hp -= 10
+                        correct = None
+                        action = None
+                        if player_hp <= 0:
+                            time = -1*fps
+                            game_state = "lose"
+                        else:
+                            temp = random.randint(0, len(verb[battle_detail[stage]["question"]])-1)
+                            while temp == battle_detail[stage]["curr_qs"]:
+                                temp = random.randint(0, len(verb[battle_detail[stage]["question"]])-1)
+                            battle_detail[stage]["curr_qs"] = temp
+                            inputArr = ""
+                            outputArr = ""
 
-            elif not correct: # Incorrect Answer Logic
-                # Animate the enemy's attack
-                if(time > 0 and time < fps*1):
-                    time += 1
-                    text_sp(screen, battle_detail[stage]["enemy_attack_word"], (120, 0, 120), 200, transform_scale([1310, 520]), int((fps*1-time)/(fps*1)*255), "center")
-                elif(time >= fps*1): time = 0
-                
-                # When animation finishes, apply damage to the player
-                if time == 0:
-                    player_hp -= 25
-                    correct = None # Reset for the next turn
-                    question_num += 1
-                    if stage == 0: action = "attack"
-                    else: action = None
-                    
-                    # Check for player defeat (lose condition)
-                    if player_hp <= 0:
-                        time = -1*fps # Start lose screen countdown
-                        game_state = "lose"
-                    else: 
-                        # Prepare the next question
-                        if battle_detail[stage]["question_type"] == "MC":
-                            temp = random.randint(0, len(battle_detail[stage]["question"])-1)
-                            battle_detail[stage]["order"].append(temp)
-                            random.shuffle(battle_detail[stage]["answer"][battle_detail[stage]["question"][temp]][1])
-                        elif battle_detail[stage]["question_type"] == "Drag":
-                            draggable_rects.clear()
-                            draggable_rects_initial_pos.clear()
-                            if question_num >= len(battle_detail[stage]["order"]):
-                                random.shuffle(battle_detail[stage]["order"])
-                                question_num = 0
+
+
+            
+
+
+            
 
     # stage select
     if game_state == "select_stage":

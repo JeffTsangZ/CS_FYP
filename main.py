@@ -1006,17 +1006,7 @@ while running:
         if dialog_num == len(dialog[story_num]):
             battle_detail = deepcopy(battle_detail_backup)
             time = 0
-
-            # inputing = False
-            # qs_answered = 0
-            # score = 0
-            # inputArr = ""
-            # outputArr = ""
-            # game_state = "select_kara"
-            # no_of_heart = 3
-
             game_state = "playing"
-            
             
             stage = story_num
             player_hp = 100
@@ -1074,7 +1064,7 @@ while running:
             pygame.draw.rect(screen, pygame.Color("#e8e8e8"), transform_scale([123, 766, 1193, 184]), border_radius=5)
             text(screen, dialog[story_num][dialog_num][1], (0, 0, 0), 48, transform_scale([153, 776]))
 
-            # effect effect
+            #  effect
             if (dialog[story_num][dialog_num][0] == 1.1):
                 if(time > 0 and time < fps*2):
                     time += 1
@@ -1097,9 +1087,12 @@ while running:
                     running = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if pygame.mouse.get_pressed()[0]:
+                        
                         if click_check(pygame.mouse.get_pos(), transform_scale([1111, 35, images[6].get_width(), images[6].get_height()])):
+                            # skip button
                             dialog_num = len(dialog[story_num])
                         else:
+                            # next sentence
                             dialog_num += 1
                             if dialog_num != len(dialog[story_num]):
                                 # effect list
